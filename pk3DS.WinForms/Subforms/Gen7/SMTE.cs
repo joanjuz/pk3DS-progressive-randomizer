@@ -706,7 +706,14 @@ public partial class SMTE : Form
                 {
                     tr.Pokemon.Add(new TrainerPoke7
                     {
-                        Species = rnd.GetRandomSpecies(avgSpec),
+                        Species = CHK_BST.Checked
+                            ? rnd.GetRandomSpeciesProgressiveBST(
+                                avgSpec,
+                                -1,
+                                SpeciesRandomizer.GetProgressiveBSTRange(avgLevel).MinBST,
+                                SpeciesRandomizer.GetProgressiveBSTRange(avgLevel).MaxBST
+                            )
+                            : rnd.GetRandomSpecies(avgSpec),
                         Level = avgLevel,
                     });
                 }
@@ -755,7 +762,21 @@ public partial class SMTE : Form
                     // every other pkm
                     else
                     {
-                        pk.Species = rnd.GetRandomSpeciesType(pk.Species, Type);
+                        if (CHK_BST.Checked)
+                        {
+                            var range = SpeciesRandomizer.GetProgressiveBSTRange(pk.Level);
+
+                            pk.Species = rnd.GetRandomSpeciesProgressiveBST(
+                                pk.Species,
+                                Type,
+                                range.MinBST,
+                                range.MaxBST
+                            );
+                        }
+                        else
+                        {
+                            pk.Species = rnd.GetRandomSpeciesType(pk.Species, Type);
+                        }
                         pk.Item = items[Util.Random32() % items.Length];
                         pk.Form = Randomizer.GetRandomForme(pk.Species, CHK_RandomMegaForm.Checked, true, Main.SpeciesStat);
                     }

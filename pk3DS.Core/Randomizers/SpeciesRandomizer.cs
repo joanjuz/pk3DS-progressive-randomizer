@@ -73,7 +73,50 @@ public class SpeciesRandomizer
             loopctr++;
         return newSpecies;
     }
+    public int GetRandomSpeciesProgressiveBST(int oldSpecies, int type, int minBST, int maxBST)
+    {
+        PersonalInfo oldpkm = SpeciesStat[oldSpecies];
+        loopctr = 0;
 
+        while (loopctr++ < 10000)
+        {
+            int newSpecies = RandSpec.Next();
+
+            if (IsSpeciesReplacementBad(newSpecies, oldSpecies))
+                continue;
+
+            PersonalInfo pkm = SpeciesStat[newSpecies];
+
+            if (IsSpeciesEXPRateBad(oldpkm, pkm))
+                continue;
+
+            if (!GetIsTypeMatch(newSpecies, type))
+                continue;
+
+            if (pkm.BST < minBST || pkm.BST > maxBST)
+                continue;
+
+            return newSpecies;
+        }
+
+        // Fallback: si no encuentra nada válido, usa el random normal.
+        return type == -1
+            ? GetRandomSpecies(oldSpecies)
+            : GetRandomSpeciesType(oldSpecies, type);
+    }
+
+    public static (int MinBST, int MaxBST) GetProgressiveBSTRange(int level)
+    {
+        return level switch
+        {
+            <= 10 => (180, 320),
+            <= 20 => (220, 380),
+            <= 30 => (280, 450),
+            <= 40 => (340, 520),
+            <= 50 => (400, 580),
+            _ => (480, 680),
+        };
+    }
     private bool GetIsTypeMatch(int newSpecies, int type) => type == -1 || SpeciesStat[newSpecies].Types.Any(z => z == type) || loopctr > 9000;
 
     public int GetRandomSpecies(int oldSpecies)

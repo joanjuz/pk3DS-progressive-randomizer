@@ -597,7 +597,22 @@ public partial class RSTE : Form
                 int species;
                 if (typerand)
                 {
-                    species = rSpeciesRand.GetRandomSpeciesType(pk.Species, type);
+                    if (rSmart)
+                    {
+                        var range = SpeciesRandomizer.GetProgressiveBSTRange(pk.Level);
+
+                        species = rSpeciesRand.GetRandomSpeciesProgressiveBST(
+                            pk.Species,
+                            type,
+                            range.MinBST,
+                            range.MaxBST
+                        );
+                    }
+                    else
+                    {
+                        species = rSpeciesRand.GetRandomSpeciesType(pk.Species, type);
+                    }
+
                     if (p == last && mevo)
                     {
                         int tries = 0;
@@ -611,7 +626,21 @@ public partial class RSTE : Form
                 }
                 else
                 {
-                    species = rSpeciesRand.GetRandomSpecies(pk.Species);
+                    if (rSmart)
+                    {
+                        var range = SpeciesRandomizer.GetProgressiveBSTRange(pk.Level);
+
+                        species = rSpeciesRand.GetRandomSpeciesProgressiveBST(
+                            pk.Species,
+                            -1,
+                            range.MinBST,
+                            range.MaxBST
+                        );
+                    }
+                    else
+                    {
+                        species = rSpeciesRand.GetRandomSpecies(pk.Species);
+                    }
                 }
 
                 pk.Species = (ushort)species;
@@ -691,7 +720,14 @@ public partial class RSTE : Form
                 t.Team[f] = // clone last pkm, keeping an average level for all new pkm
                     new TrainerData6.Pokemon(t.Team[lastPKM].Write(t.Item, t.Moves), t.Item, t.Moves)
                     {
-                        Species = (ushort)rSpeciesRand.GetRandomSpecies(avgSpec),
+                        Species = (ushort)(rSmart
+                            ? rSpeciesRand.GetRandomSpeciesProgressiveBST(
+                                avgSpec,
+                                -1,
+                                SpeciesRandomizer.GetProgressiveBSTRange(avgLevel).MinBST,
+                                SpeciesRandomizer.GetProgressiveBSTRange(avgLevel).MaxBST
+                            )
+                            : rSpeciesRand.GetRandomSpecies(avgSpec)),
                         Level = (ushort)avgLevel,
                     };
             }
@@ -724,7 +760,14 @@ public partial class RSTE : Form
             t.Team[f] = // clone last pkm, keeping an average level for all new pkm
                 new TrainerData6.Pokemon(t.Team[lastPKM].Write(t.Item, t.Moves), t.Item, t.Moves)
                 {
-                    Species = (ushort)rSpeciesRand.GetRandomSpecies(avgSpec),
+                    Species = (ushort)(rSmart
+                        ? rSpeciesRand.GetRandomSpeciesProgressiveBST(
+                            avgSpec,
+                            -1,
+                            SpeciesRandomizer.GetProgressiveBSTRange(avgLevel).MinBST,
+                            SpeciesRandomizer.GetProgressiveBSTRange(avgLevel).MaxBST
+                        )
+                        : rSpeciesRand.GetRandomSpecies(avgSpec)),
                     Level = (ushort)avgLevel,
                 };
         }
@@ -741,17 +784,17 @@ public partial class RSTE : Form
             t.Class = rModelRestricted[randClass()];
         }
         else
-        if (
-            rClass // Classes selected to be randomized
-            && (!rOnlySingles || t.BattleType == 0) //  Nonsingles only get changed if rOnlySingles
-            && !rIgnoreClass.Contains(t.Class) // Current class isn't a special class
-        )
-        {
-            int randClass() => (int)(Rand() % trClass.Length);
-            int rv; do { rv = randClass(); }
-            while (rIgnoreClass.Contains(rv) || trClass[rv].StartsWith("[~") || (Main.Config.ORAS && rv is >= 0 and <= 63) || rv is >= 68 and <= 126); // don't allow disallowed classes
-            t.Class = rv;
-        }
+            if (
+                rClass // Classes selected to be randomized
+                && (!rOnlySingles || t.BattleType == 0) //  Nonsingles only get changed if rOnlySingles
+                && !rIgnoreClass.Contains(t.Class) // Current class isn't a special class
+            )
+            {
+                int randClass() => (int)(Rand() % trClass.Length);
+                int rv; do { rv = randClass(); }
+                while (rIgnoreClass.Contains(rv) || trClass[rv].StartsWith("[~") || (Main.Config.ORAS && rv is >= 0 and <= 63) || rv is >= 68 and <= 126); // don't allow disallowed classes
+                t.Class = rv;
+            }
     }
 
     private static void RandomizeTrainerPrizeItem(TrainerData6 t)
