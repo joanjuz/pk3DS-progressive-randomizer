@@ -27,6 +27,11 @@ public partial class SMTE : Form
     private int index = -1;
     private PictureBox[] pba;
     private CheckBox[] AIBits;
+    private CheckBox CHK_ProgressiveBST;
+    private Button B_SetManualBST;
+
+    private List<ProgressiveBSTRule> ProgressiveBSTRules = GetDefaultProgressiveBSTRules();
+
 
     //private readonly byte[][] trclass;
     private readonly byte[][] trdata;
@@ -50,6 +55,7 @@ public partial class SMTE : Form
         trpoke = trp;
         TrainerNames = new TextData(trName);
         InitializeComponent();
+        AddProgressiveBSTControls();
 
         mnuView.Click += ClickView;
         mnuSet.Click += ClickSet;
@@ -74,7 +80,238 @@ public partial class SMTE : Form
 
         RandSettings.GetFormSettings(this, Tab_Rand.Controls);
     }
+    private sealed class ProgressiveBSTRule
+    {
+        public int MinLevel { get; set; }
+        public int MaxLevel { get; set; }
+        public int MinBST { get; set; }
+        public int MaxBST { get; set; }
+        public bool FullRandom { get; set; }
 
+        public ProgressiveBSTRule Clone()
+        {
+            return new ProgressiveBSTRule
+            {
+                MinLevel = MinLevel,
+                MaxLevel = MaxLevel,
+                MinBST = MinBST,
+                MaxBST = MaxBST,
+                FullRandom = FullRandom,
+            };
+        }
+    }
+    private static List<ProgressiveBSTRule> GetDefaultProgressiveBSTRules()
+    {
+        return
+        [
+            new ProgressiveBSTRule { MinLevel = 1,  MaxLevel = 10,  MinBST = 180, MaxBST = 320, FullRandom = false },
+        new ProgressiveBSTRule { MinLevel = 11, MaxLevel = 20,  MinBST = 220, MaxBST = 380, FullRandom = false },
+        new ProgressiveBSTRule { MinLevel = 21, MaxLevel = 30,  MinBST = 280, MaxBST = 450, FullRandom = false },
+        new ProgressiveBSTRule { MinLevel = 31, MaxLevel = 40,  MinBST = 340, MaxBST = 520, FullRandom = false },
+        new ProgressiveBSTRule { MinLevel = 41, MaxLevel = 50,  MinBST = 400, MaxBST = 580, FullRandom = false },
+        new ProgressiveBSTRule { MinLevel = 51, MaxLevel = 100, MinBST = 480, MaxBST = 680, FullRandom = false },
+    ];
+    }
+    private void ShowManualBSTDialog()
+    {
+        using var form = new Form
+        {
+            Text = "Manual Progressive BST Settings",
+            StartPosition = FormStartPosition.CenterParent,
+            Size = new Size(560, 360),
+            MinimizeBox = false,
+            MaximizeBox = false,
+            FormBorderStyle = FormBorderStyle.FixedDialog,
+        };
+
+        var editableRules = new System.ComponentModel.BindingList<ProgressiveBSTRule>(
+            ProgressiveBSTRules.Select(r => r.Clone()).ToList()
+        );
+
+        var grid = new DataGridView
+        {
+            Dock = DockStyle.Fill,
+            AutoGenerateColumns = false,
+            DataSource = editableRules,
+            AllowUserToAddRows = true,
+            AllowUserToDeleteRows = true,
+            SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+            MultiSelect = false,
+        };
+
+        grid.Columns.Add(new DataGridViewTextBoxColumn
+        {
+            DataPropertyName = nameof(ProgressiveBSTRule.MinLevel),
+            HeaderText = "Min Level",
+            Width = 80,
+        });
+
+        grid.Columns.Add(new DataGridViewTextBoxColumn
+        {
+            DataPropertyName = nameof(ProgressiveBSTRule.MaxLevel),
+            HeaderText = "Max Level",
+            Width = 80,
+        });
+
+        grid.Columns.Add(new DataGridViewTextBoxColumn
+        {
+            DataPropertyName = nameof(ProgressiveBSTRule.MinBST),
+            HeaderText = "Min BST",
+            Width = 80,
+        });
+
+        grid.Columns.Add(new DataGridViewTextBoxColumn
+        {
+            DataPropertyName = nameof(ProgressiveBSTRule.MaxBST),
+            HeaderText = "Max BST",
+            Width = 80,
+        });
+
+        grid.Columns.Add(new DataGridViewCheckBoxColumn
+        {
+            DataPropertyName = nameof(ProgressiveBSTRule.FullRandom),
+            HeaderText = "Full Random",
+            Width = 95,
+        });
+
+        grid.DataError += (_, e) =>
+        {
+            e.ThrowException = false;
+        };
+
+        var buttons = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Bottom,
+            Height = 42,
+            FlowDirection = FlowDirection.RightToLeft,
+            Padding = new Padding(6),
+        };
+
+        var ok = new Button
+        {
+            Text = "OK",
+            DialogResult = DialogResult.None,
+            Width = 80,
+        };
+
+        var cancel = new Button
+        {
+            Text = "Cancel",
+            DialogResult = DialogResult.Cancel,
+            Width = 80,
+        };
+
+        var reset = new Button
+        {
+            Text = "Reset Defaults",
+            Width = 105,
+        };
+
+        reset.Click += (_, _) =>
+        {
+            editableRules.Clear();
+
+            foreach (var rule in GetDefaultProgressiveBSTRules())
+                editableRules.Add(rule);
+        };
+
+        ok.Click += (_, _) =>
+        {
+            grid.EndEdit();
+
+            var candidateRules = editableRules
+                .Select(r => r.Clone())
+                .OrderBy(r => r.MinLevel)
+                .ToList();
+
+            if (!ValidateProgressiveBSTRules(candidateRules))
+                return;
+
+            ProgressiveBSTRules = candidateRules;
+
+            form.DialogResult = DialogResult.OK;
+            form.Close();
+        };
+
+        buttons.Controls.Add(ok);
+        buttons.Controls.Add(cancel);
+        buttons.Controls.Add(reset);
+
+        form.Controls.Add(grid);
+        form.Controls.Add(buttons);
+
+        form.ShowDialog(this);
+    }
+    private static bool ValidateProgressiveBSTRules(List<ProgressiveBSTRule> rules)
+    {
+        if (rules.Count == 0)
+        {
+            WinFormsUtil.Alert("You must define at least one BST range.");
+            return false;
+        }
+
+        foreach (var rule in rules)
+        {
+            if (rule.MinLevel < 1 || rule.MaxLevel > 100 || rule.MinLevel > rule.MaxLevel)
+            {
+                WinFormsUtil.Alert("Invalid level range detected. Levels must be between 1 and 100, and Min Level must be less than or equal to Max Level.");
+                return false;
+            }
+
+            if (!rule.FullRandom && (rule.MinBST < 1 || rule.MaxBST > 999 || rule.MinBST > rule.MaxBST))
+            {
+                WinFormsUtil.Alert("Invalid BST range detected. BST must be between 1 and 999, and Min BST must be less than or equal to Max BST.");
+                return false;
+            }
+        }
+
+        for (int i = 1; i < rules.Count; i++)
+        {
+            if (rules[i].MinLevel <= rules[i - 1].MaxLevel)
+            {
+                WinFormsUtil.Alert("Overlapping level ranges detected. Please make sure level ranges do not overlap.");
+                return false;
+            }
+        }
+
+        return true;
+    }
+    private ProgressiveBSTRule GetProgressiveBSTRule(int level)
+    {
+        var rule = ProgressiveBSTRules.FirstOrDefault(r => level >= r.MinLevel && level <= r.MaxLevel);
+
+        if (rule is not null)
+            return rule;
+
+        var fallback = SpeciesRandomizer.GetProgressiveBSTRange(level);
+
+        return new ProgressiveBSTRule
+        {
+            MinLevel = level,
+            MaxLevel = level,
+            MinBST = fallback.MinBST,
+            MaxBST = fallback.MaxBST,
+            FullRandom = false,
+        };
+    }
+    private int GetProgressiveRandomSpecies(SpeciesRandomizer rnd, int oldSpecies, int type, int level)
+    {
+        var rule = GetProgressiveBSTRule(level);
+
+        if (rule.FullRandom)
+        {
+            return type == -1
+                ? rnd.GetRandomSpecies(oldSpecies)
+                : rnd.GetRandomSpeciesType(oldSpecies, type);
+        }
+
+        return rnd.GetRandomSpeciesProgressiveBST(
+            oldSpecies,
+            type,
+            rule.MinBST,
+            rule.MaxBST
+        );
+    }
     private int GetSlot(object sender)
     {
         var send = ((sender as ToolStripItem)?.Owner as ContextMenuStrip)?.SourceControl ?? sender as PictureBox;
@@ -645,7 +882,7 @@ public partial class SMTE : Form
 
             E = CHK_E.Checked,
             L = CHK_L.Checked,
-            rBST = CHK_BST.Checked,
+            rBST = CHK_BST.Checked && !CHK_ProgressiveBST.Checked,
         };
         rnd.Initialize();
 
@@ -706,13 +943,8 @@ public partial class SMTE : Form
                 {
                     tr.Pokemon.Add(new TrainerPoke7
                     {
-                        Species = CHK_BST.Checked
-                            ? rnd.GetRandomSpeciesProgressiveBST(
-                                avgSpec,
-                                -1,
-                                SpeciesRandomizer.GetProgressiveBSTRange(avgLevel).MinBST,
-                                SpeciesRandomizer.GetProgressiveBSTRange(avgLevel).MaxBST
-                            )
+                        Species = CHK_ProgressiveBST.Checked
+                            ? GetProgressiveRandomSpecies(rnd, avgSpec, -1, avgLevel)
                             : rnd.GetRandomSpecies(avgSpec),
                         Level = avgLevel,
                     });
@@ -729,9 +961,13 @@ public partial class SMTE : Form
             {
                 for (int g = tr.NumPokemon; g < 6; g++)
                 {
+                    var range = SpeciesRandomizer.GetProgressiveBSTRange(avgLevel);
+
                     tr.Pokemon.Add(new TrainerPoke7
                     {
-                        Species = rnd.GetRandomSpecies(avgSpec),
+                        Species = CHK_ProgressiveBST.Checked
+                            ? GetProgressiveRandomSpecies(rnd, avgSpec, -1, avgLevel)
+                            : rnd.GetRandomSpecies(avgSpec),
                         Level = avgLevel,
                     });
                 }
@@ -775,7 +1011,19 @@ public partial class SMTE : Form
                         }
                         else
                         {
-                            pk.Species = rnd.GetRandomSpeciesType(pk.Species, Type);
+                            if (CHK_ProgressiveBST.Checked)
+                            {
+                                pk.Species = GetProgressiveRandomSpecies(
+                                    rnd,
+                                    pk.Species,
+                                    Type,
+                                    pk.Level
+                                );
+                            }
+                            else
+                            {
+                                pk.Species = rnd.GetRandomSpeciesType(pk.Species, Type);
+                            }
                         }
                         pk.Item = items[Util.Random32() % items.Length];
                         pk.Form = Randomizer.GetRandomForme(pk.Species, CHK_RandomMegaForm.Checked, true, Main.SpeciesStat);
@@ -830,7 +1078,51 @@ public partial class SMTE : Form
         }
         WinFormsUtil.Alert("Randomized all Trainers according to specification!", "Press the Dump to .TXT button to view the new Trainer information!");
     }
+    private void AddProgressiveBSTControls()
+    {
+        int y = CHK_BST.Bottom + 6;
 
+        CHK_ProgressiveBST = new CheckBox
+        {
+            AutoSize = true,
+            Location = new Point(CHK_BST.Left, y),
+            Name = "CHK_ProgressiveBST",
+            Size = new Size(110, 17),
+            TabIndex = 999,
+            Text = "Progressive BST",
+            UseVisualStyleBackColor = true,
+        };
+
+        B_SetManualBST = new Button
+        {
+            Location = new Point(CHK_BST.Left + 120, y - 3),
+            Name = "B_SetManualBST",
+            Size = new Size(125, 23),
+            TabIndex = 1000,
+            Text = "Set BST manually",
+            UseVisualStyleBackColor = true,
+            Enabled = false,
+        };
+
+        CHK_ProgressiveBST.CheckedChanged += (_, _) =>
+        {
+            if (CHK_ProgressiveBST.Checked)
+                CHK_BST.Checked = false;
+
+            B_SetManualBST.Enabled = CHK_ProgressiveBST.Checked && CHK_RandomPKM.Checked;
+        };
+
+        CHK_BST.CheckedChanged += (_, _) =>
+        {
+            if (CHK_BST.Checked)
+                CHK_ProgressiveBST.Checked = false;
+        };
+
+        B_SetManualBST.Click += (_, _) => ShowManualBSTDialog();
+
+        Tab_PKM1.Controls.Add(CHK_ProgressiveBST);
+        Tab_PKM1.Controls.Add(B_SetManualBST);
+    }
     private void B_HighAttack_Click(object sender, EventArgs e)
     {
         pkm.Species = CB_Species.SelectedIndex;
@@ -886,6 +1178,17 @@ public partial class SMTE : Form
             c.Enabled = CHK_RandomPKM.Checked;
             c.Checked = CHK_RandomPKM.Checked;
         }
+
+        if (CHK_ProgressiveBST is not null)
+        {
+            CHK_ProgressiveBST.Enabled = CHK_RandomPKM.Checked;
+
+            if (!CHK_RandomPKM.Checked)
+                CHK_ProgressiveBST.Checked = false;
+        }
+
+        if (B_SetManualBST is not null)
+            B_SetManualBST.Enabled = CHK_RandomPKM.Checked && CHK_ProgressiveBST.Checked;
     }
 
     private void CHK_RandomClass_CheckedChanged(object sender, EventArgs e)

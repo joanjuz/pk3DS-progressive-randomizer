@@ -10,7 +10,6 @@ using System.Windows.Forms;
 using pk3DS.Core;
 using pk3DS.Core.Randomizers;
 using pk3DS.Core.Structures;
-
 namespace pk3DS.WinForms;
 
 public partial class RSTE : Form
@@ -450,11 +449,12 @@ public partial class RSTE : Form
         ReadFile();
     }
 
-    public static bool rPKM, rSmart, rLevel, rMove, rMetronome, rNoMove, rForceHighPower, rAbility, rDiffAI,
-        rDiffIV, rClass, rGift, rItem, rDoRand, rRandomMegas, rGymE4Only,
-        rTypeTheme, rTypeGymTrainers, rOnlySingles, rDMG, rSTAB, r6PKM, rForceFullyEvolved;
+    public static bool rPKM, rSmart, rProgressiveBST, rLevel, rMove, rMetronome, rNoMove, rForceHighPower, rAbility, rDiffAI,
+    rDiffIV, rClass, rGift, rItem, rDoRand, rRandomMegas, rGymE4Only,
+    rTypeTheme, rTypeGymTrainers, rOnlySingles, rDMG, rSTAB, r6PKM, rForceFullyEvolved;
 
     public static bool rNoFixedDamage;
+    public static List<ProgressiveBSTRule> rProgressiveBSTRules = [];
     internal static bool[] rThemedClasses = [];
     private static string[] rTags;
     private static int[] megaEvos;
@@ -471,10 +471,15 @@ public partial class RSTE : Form
 
     private void B_Randomize_Click(object sender, EventArgs e)
     {
-        rPKM = rMove = rMetronome = rAbility = rDiffAI = rDiffIV = rClass = rGift = rItem = rDoRand = false; // init to false
+        rPKM = rMove = rMetronome = rAbility = rDiffAI = rDiffIV = rClass = rGift = rItem = rDoRand = false;
+        rSmart = rProgressiveBST = false;
+        rProgressiveBSTRules = [];
+
         rGiftPercent = 0;
         rForceFullyEvolvedLevel = 0;
-        new TrainerRand().ShowDialog(); // Open Randomizer Config to get config vals
+
+        new TrainerRand().ShowDialog();
+
         if (rDoRand)
             Randomize();
     }
@@ -583,7 +588,44 @@ public partial class RSTE : Form
         CB_TrainerID.SelectedIndex = 1;
         WinFormsUtil.Alert("Randomized all Trainers according to specification!", "Press the Dump to .TXT button to view the new Trainer information!");
     }
+    private static ProgressiveBSTRule GetProgressiveBSTRule(int level)
+    {
+        var rule = rProgressiveBSTRules.FirstOrDefault(r =>
+            level >= r.MinLevel && level <= r.MaxLevel);
 
+        if (rule is not null)
+            return rule;
+
+        var fallback = SpeciesRandomizer.GetProgressiveBSTRange(level);
+
+        return new ProgressiveBSTRule
+        {
+            MinLevel = level,
+            MaxLevel = level,
+            MinBST = fallback.MinBST,
+            MaxBST = fallback.MaxBST,
+            FullRandom = false,
+        };
+    }
+
+    private static int GetProgressiveRandomSpecies(int oldSpecies, int type, int level)
+    {
+        var rule = GetProgressiveBSTRule(level);
+
+        if (rule.FullRandom)
+        {
+            return type == -1
+                ? rSpeciesRand.GetRandomSpecies(oldSpecies)
+                : rSpeciesRand.GetRandomSpeciesType(oldSpecies, type);
+        }
+
+        return rSpeciesRand.GetRandomSpeciesProgressiveBST(
+            oldSpecies,
+            type,
+            rule.MinBST,
+            rule.MaxBST
+        );
+    }
     private static void RandomizeTeam(TrainerData6 t, MoveRandomizer move, LearnsetRandomizer learn, ushort[] itemvals, int type, bool mevo, bool typerand)
     {
         int last = t.Team.Length - 1;
@@ -597,16 +639,10 @@ public partial class RSTE : Form
                 int species;
                 if (typerand)
                 {
-                    if (rSmart)
+                    if (rProgressiveBST)
                     {
-                        var range = SpeciesRandomizer.GetProgressiveBSTRange(pk.Level);
 
-                        species = rSpeciesRand.GetRandomSpeciesProgressiveBST(
-                            pk.Species,
-                            type,
-                            range.MinBST,
-                            range.MaxBST
-                        );
+                        species = GetProgressiveRandomSpecies(pk.Species, type, pk.Level);
                     }
                     else
                     {
@@ -626,16 +662,11 @@ public partial class RSTE : Form
                 }
                 else
                 {
-                    if (rSmart)
+                    if (rProgressiveBST)
                     {
                         var range = SpeciesRandomizer.GetProgressiveBSTRange(pk.Level);
 
-                        species = rSpeciesRand.GetRandomSpeciesProgressiveBST(
-                            pk.Species,
-                            -1,
-                            range.MinBST,
-                            range.MaxBST
-                        );
+                        species = GetProgressiveRandomSpecies(pk.Species, type, pk.Level);
                     }
                     else
                     {
@@ -720,15 +751,9 @@ public partial class RSTE : Form
                 t.Team[f] = // clone last pkm, keeping an average level for all new pkm
                     new TrainerData6.Pokemon(t.Team[lastPKM].Write(t.Item, t.Moves), t.Item, t.Moves)
                     {
-                        Species = (ushort)(rSmart
-                            ? rSpeciesRand.GetRandomSpeciesProgressiveBST(
-                                avgSpec,
-                                -1,
-                                SpeciesRandomizer.GetProgressiveBSTRange(avgLevel).MinBST,
-                                SpeciesRandomizer.GetProgressiveBSTRange(avgLevel).MaxBST
-                            )
+                        Species = (ushort)(rProgressiveBST
+                            ? GetProgressiveRandomSpecies(avgSpec, -1, avgLevel)
                             : rSpeciesRand.GetRandomSpecies(avgSpec)),
-                        Level = (ushort)avgLevel,
                     };
             }
         }
@@ -760,13 +785,8 @@ public partial class RSTE : Form
             t.Team[f] = // clone last pkm, keeping an average level for all new pkm
                 new TrainerData6.Pokemon(t.Team[lastPKM].Write(t.Item, t.Moves), t.Item, t.Moves)
                 {
-                    Species = (ushort)(rSmart
-                        ? rSpeciesRand.GetRandomSpeciesProgressiveBST(
-                            avgSpec,
-                            -1,
-                            SpeciesRandomizer.GetProgressiveBSTRange(avgLevel).MinBST,
-                            SpeciesRandomizer.GetProgressiveBSTRange(avgLevel).MaxBST
-                        )
+                    Species = (ushort)(rProgressiveBST
+                        ? GetProgressiveRandomSpecies(avgSpec, -1, avgLevel)
                         : rSpeciesRand.GetRandomSpecies(avgSpec)),
                     Level = (ushort)avgLevel,
                 };
@@ -956,6 +976,7 @@ public partial class RSTE : Form
         }
         return tags;
     }
+
 
     private bool ImportantTrainers;
     public static SpeciesRandomizer rSpeciesRand;

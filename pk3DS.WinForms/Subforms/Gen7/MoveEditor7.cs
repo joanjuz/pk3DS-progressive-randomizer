@@ -12,19 +12,276 @@ public partial class MoveEditor7 : Form
     {
         files = infiles;
         movelist[0] = "";
-
         InitializeComponent();
         Setup();
+
+        AddBalanceMovesButton();
+        FixMoveEditorOptionsLayout();
+        FixMoveFlagsListLayout();
+
         RandSettings.GetFormSettings(this, groupBox1.Controls);
     }
 
     private readonly byte[][] files;
+    private Button B_BalanceMoves;
     private readonly string[] types = Main.Config.GetText(TextName.Types);
     private readonly string[] moveflavor = Main.Config.GetText(TextName.MoveFlavor);
     private readonly string[] movelist = Main.Config.GetText(TextName.MoveNames);
     private readonly string[] MoveCategories = ["Status", "Physical", "Special"];
     private readonly string[] StatCategories = ["None", "Attack", "Defense", "Special Attack", "Special Defense", "Speed", "Accuracy", "Evasion", "All",
     ];
+
+    private void AddBalanceMovesButton()
+    {
+        const int gap = 6;
+
+        B_BalanceMoves = new Button
+        {
+            Location = new System.Drawing.Point(B_Metronome.Left, B_Metronome.Bottom + gap),
+            Name = "B_BalanceMoves",
+            Size = new System.Drawing.Size(B_Metronome.Width, 23),
+            TabIndex = 999,
+            Text = "Balance moves",
+            UseVisualStyleBackColor = true,
+        };
+
+        B_BalanceMoves.Click += B_BalanceMoves_Click;
+
+        Controls.Add(B_BalanceMoves);
+        B_BalanceMoves.BringToFront();
+
+        // Mueve el grupo Options un poco hacia abajo para que no se solape con el nuevo botón.
+        int requiredTop = B_BalanceMoves.Bottom + gap;
+
+        if (groupBox1.Top < requiredTop)
+            groupBox1.Top = requiredTop;
+    }
+
+    private void FixMoveEditorOptionsLayout()
+    {
+        const int gap = 6;
+
+        B_Table.Location = new System.Drawing.Point(
+            B_Table.Left,
+            B_Table.Top + 22
+        );
+
+        int requiredHeight = B_Table.Bottom + 10;
+
+        if (groupBox1.Height < requiredHeight)
+            groupBox1.Height = requiredHeight;
+    }
+    private void B_BalanceMoves_Click(object sender, EventArgs e)
+    {
+        if (DialogResult.Yes != WinFormsUtil.Prompt(
+            MessageBoxButtons.YesNo,
+            "Balance moves?",
+            "This will apply the custom move changes from the PDF. Cannot undo."))
+        {
+            return;
+        }
+
+        SetEntry();
+
+        int changed = ApplyBalancedMoves();
+
+        GetEntry();
+
+        WinFormsUtil.Alert(
+            "Moves balanced!",
+            $"{changed} moves were updated.");
+    }
+    private sealed class MoveBalancePatch
+    {
+        public int Move { get; init; }
+        public int? Power { get; init; }
+        public int? Accuracy { get; init; }
+        public int? PP { get; init; }
+        public int? CriticalStage { get; init; }
+        public int? Heal { get; init; }
+        public int? Inflict { get; init; }
+        public int? InflictChance { get; init; }
+        public bool ClearStatEffects { get; init; }
+        public bool KingShieldAttackMinusOne { get; init; }
+    }
+    private int ApplyBalancedMoves()
+    {
+        int changed = 0;
+
+        foreach (var patch in GetBalancedMovePatches())
+        {
+            if (patch.Move <= 0 || patch.Move >= files.Length)
+                continue;
+
+            byte[] data = files[patch.Move];
+
+            if (data.Length < 0x1E)
+                continue;
+
+            if (patch.Power.HasValue)
+                data[0x03] = (byte)patch.Power.Value;
+
+            if (patch.Accuracy.HasValue)
+                data[0x04] = (byte)patch.Accuracy.Value;
+
+            if (patch.PP.HasValue)
+                data[0x05] = (byte)patch.PP.Value;
+
+            if (patch.CriticalStage.HasValue)
+                data[0x0E] = (byte)patch.CriticalStage.Value;
+
+            if (patch.Heal.HasValue)
+                data[0x13] = (byte)patch.Heal.Value;
+
+            if (patch.Inflict.HasValue)
+                Array.Copy(BitConverter.GetBytes((short)patch.Inflict.Value), 0, data, 0x08, 2);
+
+            if (patch.InflictChance.HasValue)
+                data[0x0A] = (byte)patch.InflictChance.Value;
+
+            if (patch.ClearStatEffects)
+                ClearMoveStatEffects(data);
+
+            if (patch.KingShieldAttackMinusOne)
+                SetKingShieldAttackDrop(data);
+
+            files[patch.Move] = data;
+            changed++;
+        }
+
+        return changed;
+    }
+    private static void ClearMoveStatEffects(byte[] data)
+    {
+        // Stat categories: None, Attack, Defense, Sp. Atk, Sp. Def, Speed, Accuracy, Evasion, All.
+        data[0x15] = 0;
+        data[0x16] = 0;
+        data[0x17] = 0;
+
+        // Stat stages.
+        data[0x18] = 0;
+        data[0x19] = 0;
+        data[0x1A] = 0;
+
+        // Stat effect chances.
+        data[0x1B] = 0;
+        data[0x1C] = 0;
+        data[0x1D] = 0;
+    }
+
+    private static void SetKingShieldAttackDrop(byte[] data)
+    {
+        ClearMoveStatEffects(data);
+
+        // Attack = index 1 in StatCategories.
+        data[0x15] = 1;
+
+        // -1 Attack.
+        data[0x18] = unchecked((byte)-1);
+
+        // 100% chance.
+        data[0x1B] = 100;
+    }
+    private static MoveBalancePatch[] GetBalancedMovePatches()
+    {
+        const int Confusion = 6;
+
+        return
+        [
+            // Página 1 del PDF
+            // Corte: 70 power, 100 accuracy, 15 PP, critical stage 1.
+            new MoveBalancePatch { Move = 15, Power = 70, Accuracy = 100, PP = 15, CriticalStage = 1 },
+
+        // Golpe Roca
+        new MoveBalancePatch { Move = 249, Power = 60, Accuracy = 100 },
+
+        // Vuelo
+        new MoveBalancePatch { Move = 19, Power = 100, Accuracy = 100 },
+
+        // Espora
+        new MoveBalancePatch { Move = 147, Accuracy = 85 },
+
+        // Deslumbrar
+        new MoveBalancePatch { Move = 137, Accuracy = 90, PP = 15 },
+
+        // Torm. Diamantes / Diamond Storm: remover boost secundario.
+        new MoveBalancePatch { Move = 591, Power = 95, Accuracy = 95, PP = 10, ClearStatEffects = true },
+
+        // Ala Mortífera / Oblivion Wing
+        new MoveBalancePatch { Move = 613, Power = 80, Accuracy = 100, Heal = 50 },
+
+        // Cháchara / Chatter
+        new MoveBalancePatch { Move = 448, Power = 80, Accuracy = 100, PP = 15, Inflict = Confusion, InflictChance = 15 },
+
+        // Chupavidas / Leech Life
+        new MoveBalancePatch { Move = 141, Power = 70, Accuracy = 100, PP = 15 },
+
+        // Bomba Fango / Sludge Bomb
+        new MoveBalancePatch { Move = 188, Power = 60, Accuracy = 100 },
+
+        // Danza Llama / Fire Spin
+        new MoveBalancePatch { Move = 552, Power = 70, Accuracy = 100 },
+
+        // Shuriken de Agua / Water Shuriken: 20 por golpe.
+        new MoveBalancePatch { Move = 594, Power = 20, Accuracy = 100 },
+
+        // PP 7
+        new MoveBalancePatch { Move = 182, PP = 7 }, // Protección / Protect
+        new MoveBalancePatch { Move = 197, PP = 7 }, // Detección / Detect
+        new MoveBalancePatch { Move = 596, PP = 7 }, // Barrera Espinosa / Spiky Shield
+        new MoveBalancePatch { Move = 588, PP = 7, KingShieldAttackMinusOne = true }, // Escudo Real / King's Shield
+        new MoveBalancePatch { Move = 476, PP = 7 }, // Polvo Ira / Rage Powder
+        new MoveBalancePatch { Move = 266, PP = 7 }, // Señuelo / Follow Me
+        new MoveBalancePatch { Move = 502, PP = 7 }, // Cambio Banda / Ally Switch
+        new MoveBalancePatch { Move = 73,  PP = 7 }, // Drenadoras / Leech Seed
+
+        // Página 2 del PDF
+        new MoveBalancePatch { Move = 281, PP = 7 }, // Bostezo / Yawn
+
+        // PP 5
+        new MoveBalancePatch { Move = 270, PP = 5 }, // Refuerzo / Helping Hand
+        new MoveBalancePatch { Move = 105, PP = 5 }, // Recuperación / Recover
+        new MoveBalancePatch { Move = 234, PP = 5 }, // Sol Matinal / Morning Sun
+        new MoveBalancePatch { Move = 236, PP = 5 }, // Luz Lunar / Moonlight
+        new MoveBalancePatch { Move = 208, PP = 5 }, // Batido / Milk Drink
+        new MoveBalancePatch { Move = 303, PP = 5 }, // Relajo / Slack Off
+        new MoveBalancePatch { Move = 235, PP = 5 }, // Síntesis / Synthesis
+        new MoveBalancePatch { Move = 456, PP = 5 }, // Auxilio / Heal Order
+        new MoveBalancePatch { Move = 135, PP = 5 }, // Amortiguador / Soft-Boiled
+        new MoveBalancePatch { Move = 355, PP = 5 }, // Respiro / Roost
+        new MoveBalancePatch { Move = 505, PP = 5 }, // Pulso Cura / Heal Pulse
+    ];
+    }
+    private void FixMoveFlagsListLayout()
+    {
+        const int gap = 6;
+
+        CheckedListBox flagsList = null;
+
+        foreach (Control control in Controls)
+        {
+            if (control is CheckedListBox checkedListBox)
+            {
+                flagsList = checkedListBox;
+                break;
+            }
+        }
+
+        if (flagsList is null)
+            return;
+
+        // Poner la lista debajo del botón Export Table.
+        flagsList.Top = B_Table.Bottom + gap;
+
+        // Reducir la altura, manteniendo scroll.
+        int bottomMargin = 8;
+        int newHeight = ClientSize.Height - flagsList.Top - bottomMargin;
+
+        if (newHeight < 120)
+            newHeight = 120;
+
+        flagsList.Height = newHeight;
+    }
 
     private static readonly string[] TargetingTypes =
     [

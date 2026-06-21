@@ -12,6 +12,7 @@ public partial class TMHMEditor6 : Form
     public TMHMEditor6()
     {
         InitializeComponent();
+        AddForgettableHMsButton();
         if (Main.ExeFSPath == null) { WinFormsUtil.Alert("No exeFS code to load."); Close(); }
         string[] files = Directory.GetFiles(Main.ExeFSPath);
         if (!File.Exists(files[0]) || !Path.GetFileNameWithoutExtension(files[0]).Contains("code")) { WinFormsUtil.Alert("No .code.bin detected."); Close(); }
@@ -31,7 +32,175 @@ public partial class TMHMEditor6 : Form
     private readonly int offset = Main.Config.ORAS ? 0x004A67EE : 0x00464796; // Default
     private readonly byte[] data;
     private int dataoffset;
+    private Button B_ForgettableHMs;
+    private void AddForgettableHMsButton()
+    {
+        B_ForgettableHMs = new Button
+        {
+            Location = new System.Drawing.Point(13, CHK_RandomizeField.Bottom + 8),
+            Name = "B_ForgettableHMs",
+            Size = new System.Drawing.Size(180, 23),
+            TabIndex = 999,
+            Text = "Make HMs forgettable",
+            UseVisualStyleBackColor = true,
+        };
 
+        B_ForgettableHMs.Click += B_ForgettableHMs_Click;
+
+        groupBox1.Controls.Add(B_ForgettableHMs);
+        B_ForgettableHMs.BringToFront();
+
+        int requiredHeight = B_ForgettableHMs.Bottom + 10;
+
+        if (groupBox1.Height < requiredHeight)
+            groupBox1.Height = requiredHeight;
+
+        int requiredClientHeight = groupBox1.Bottom + 10;
+
+        if (ClientSize.Height < requiredClientHeight)
+            ClientSize = new System.Drawing.Size(ClientSize.Width, requiredClientHeight);
+    }
+    private void B_ForgettableHMs_Click(object sender, EventArgs e)
+    {
+        if (WinFormsUtil.Prompt(
+            MessageBoxButtons.YesNo,
+            "Make HMs forgettable?",
+            "This will patch code.bin so HM moves can be forgotten normally. Make a backup before continuing.") != DialogResult.Yes)
+        {
+            return;
+        }
+
+        bool patched = PatchForgettableHMs();
+
+        WinFormsUtil.Alert(patched
+            ? "HMs should now be forgettable. Save/close the editor to write code.bin."
+            : "Could not find a known HM forget restriction pattern in code.bin.");
+    }
+
+    private bool PatchForgettableHMs()
+    {
+        if (Main.Config.ORAS)
+            return PatchForgettableHMsORAS();
+
+        return PatchForgettableHMsXY();
+    }
+    private bool PatchForgettableHMsORAS()
+    {
+        byte[] original =
+        [
+            0x3C, 0x30, 0x9F, 0xE5, // ldr r3, [pc, #0x3c]
+        0x00, 0x10, 0xA0, 0xE3, // mov r1, #0
+        0x81, 0x20, 0x83, 0xE0, // add r2, r3, r1, lsl #1
+        0xB8, 0xCB, 0xD2, 0xE1, // ldrh ip, [r2, #0xb8]
+        0x00, 0x00, 0x5C, 0xE1, // cmp ip, r0
+        0xBA, 0x2B, 0xD2, 0x11, // ldrhne r2, [r2, #0xba]
+        0x00, 0x00, 0x52, 0x11, // cmpne r2, r0
+        0x06, 0x00, 0x00, 0x0A, // beq
+        0x02, 0x10, 0x81, 0xE2, // add r1, r1, #2
+        0x06, 0x00, 0x51, 0xE3, // cmp r1, #6
+        0xF6, 0xFF, 0xFF, 0x3A, // blo
+        0x01, 0x1C, 0x40, 0xE2, // sub r1, r0, #0x100
+        0x23, 0x10, 0x51, 0xE2, // subs r1, r1, #0x23
+        0x00, 0x00, 0xA0, 0x13, // movne r0, #0
+        0x00, 0x00, 0x00, 0x1A, // bne
+        0x01, 0x00, 0xA0, 0xE3, // mov r0, #1
+        0x1E, 0xFF, 0x2F, 0xE1, // bx lr
+        0xEE, 0x67, 0x5A, 0x00, // pointer to TM/HM table
+    ];
+
+        byte[] patch =
+        [
+            0x00, 0x00, 0xA0, 0xE3, // mov r0, #0
+        0x1E, 0xFF, 0x2F, 0xE1, // bx lr
+    ];
+
+        int patchOffset = IndexOfBytes(data, original);
+
+        if (patchOffset < 0)
+        {
+            // Por si ya está parcheado en el offset conocido de ORAS.
+            const int knownORASOffset = 0x2B7090;
+
+            if (data.Length > knownORASOffset + patch.Length &&
+                data.Skip(knownORASOffset).Take(patch.Length).SequenceEqual(patch))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        Array.Copy(patch, 0, data, patchOffset, patch.Length);
+        return true;
+    }
+    private bool PatchForgettableHMsXY()
+    {
+        byte[] original =
+        [
+            0x0F, 0x00, 0x50, 0xE3, // cmp r0, #15  / Cut
+        0x13, 0x00, 0x50, 0x13, // cmpne r0, #19 / Fly
+        0x05, 0x00, 0x00, 0x0A, // beq true
+
+        0x39, 0x00, 0x50, 0xE3, // cmp r0, #57 / Surf
+        0x46, 0x00, 0x50, 0x13, // cmpne r0, #70 / Strength
+        0x02, 0x00, 0x00, 0x0A, // beq true
+
+        0x7F, 0x00, 0x50, 0xE3, // cmp r0, #127 / Waterfall
+        0x00, 0x00, 0xA0, 0x13, // movne r0, #0
+        0x00, 0x00, 0x00, 0x1A, // bne return
+
+        0x01, 0x00, 0xA0, 0xE3, // mov r0, #1
+        0x1E, 0xFF, 0x2F, 0xE1, // bx lr
+    ];
+
+        byte[] patch =
+        [
+            0x00, 0x00, 0xA0, 0xE3, // mov r0, #0
+        0x1E, 0xFF, 0x2F, 0xE1, // bx lr
+    ];
+
+        int patchOffset = IndexOfBytes(data, original);
+
+        if (patchOffset < 0)
+        {
+            const int knownXYOffset = 0x29F434;
+
+            if (data.Length > knownXYOffset + patch.Length &&
+                data.Skip(knownXYOffset).Take(patch.Length).SequenceEqual(patch))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+        Array.Copy(patch, 0, data, patchOffset, patch.Length);
+        return true;
+    }
+    private static int IndexOfBytes(byte[] source, byte[] pattern)
+    {
+        if (pattern.Length == 0 || source.Length < pattern.Length)
+            return -1;
+
+        for (int i = 0; i <= source.Length - pattern.Length; i++)
+        {
+            bool match = true;
+
+            for (int j = 0; j < pattern.Length; j++)
+            {
+                if (source[i + j] == pattern[j])
+                    continue;
+
+                match = false;
+                break;
+            }
+
+            if (match)
+                return i;
+        }
+
+        return -1;
+    }
     private void GetDataOffset()
     {
         dataoffset = offset; // reset

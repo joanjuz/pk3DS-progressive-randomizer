@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
+using pk3DS.Core.Structures;
 
 namespace pk3DS.WinForms;
 
@@ -19,6 +20,8 @@ public partial class MartEditor7UU : Form
             Close();
         }
         InitializeComponent();
+        AddRareCandyButton();
+
 
         data = File.ReadAllBytes(CROPath);
         //len_BPTutor = data.Skip(0x52D2).Take(4).ToArray();
@@ -32,7 +35,102 @@ public partial class MartEditor7UU : Form
         CB_Location.SelectedIndex =
             CB_LocationBPItem.SelectedIndex = 0;
     }
+    private void AddRareCandyButton()
+    {
+        const int gap = 8;
+        const int buttonWidth = 120;
 
+        B_AddRareCandies = new Button
+        {
+            Location = new System.Drawing.Point(B_Randomize.Right + gap, B_Randomize.Top),
+            Name = "B_AddRareCandies",
+            Size = new System.Drawing.Size(buttonWidth, 23),
+            TabIndex = 305,
+            Text = "Add rare candies",
+            UseVisualStyleBackColor = true,
+        };
+
+        B_AddRareCandies.Click += B_AddRareCandies_Click;
+        Controls.Add(B_AddRareCandies);
+
+        // Mover el checkbox a una segunda línea para evitar solapamientos.
+        CHK_XItems.AutoSize = true;
+        CHK_XItems.Location = new System.Drawing.Point(
+            B_Randomize.Left,
+            B_Randomize.Bottom + gap
+        );
+
+        // Si algún control queda muy abajo, aumentar un poco la ventana.
+        int requiredHeight = CHK_XItems.Bottom + 12;
+
+        if (requiredHeight > ClientSize.Height)
+            ClientSize = new System.Drawing.Size(ClientSize.Width, requiredHeight);
+    }
+    private void B_AddRareCandies_Click(object sender, EventArgs e)
+    {
+        if (DialogResult.Yes != WinFormsUtil.Prompt(
+            MessageBoxButtons.YesNo,
+            "Add Rare Candies to all regular marts?",
+            "This will replace the last slot of each regular mart with Rare Candy. Special marts and BP shops will not be changed. Rare Candy price will be set to 10 when you click Save."))
+        {
+            return;
+        }
+
+        if (entryItem > -1)
+            SetListItem();
+
+        int rareCandy = GetRareCandyItemID();
+
+        for (int i = 0; i < RegularMartCount && i < len_Items.Length; i++)
+        {
+            int count = len_Items[i];
+
+            if (count <= 0)
+                continue;
+
+            int ofs = ofs_Item + (len_Items.Take(i).Sum(z => z) * 2);
+            int lastSlot = count - 1;
+            int writeOffset = ofs + (2 * lastSlot);
+
+            Array.Copy(BitConverter.GetBytes((ushort)rareCandy), 0, data, writeOffset, 2);
+        }
+
+        setRareCandyPriceOnSave = true;
+
+        if (entryItem > -1)
+            GetListItem();
+
+        WinFormsUtil.Alert(
+            "Rare Candies added!",
+            "Click Save to write Shop.cro and set Rare Candy price to 10.");
+    }
+    private int GetRareCandyItemID()
+    {
+        int item = Array.FindIndex(itemlist, z =>
+            string.Equals(z, "Rare Candy", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(z, "Caramelo Raro", StringComparison.OrdinalIgnoreCase));
+
+        return item > 0 ? item : RareCandyItemID;
+    }
+    private static void SetItemPrice(int itemID, int price)
+    {
+        var g = Main.Config.GetGARCData("item");
+        byte[][] files = g.Files;
+
+        if (itemID <= 0 || itemID >= files.Length)
+        {
+            WinFormsUtil.Alert("Could not set Rare Candy price.", $"Invalid item ID: {itemID}");
+            return;
+        }
+
+        var item = new Item(files[itemID]);
+        item.BuyPrice = price;
+
+        files[itemID] = item.Write();
+
+        g.Files = files;
+        g.Save();
+    }
     private const int ofs_Item = 0x50BC;
     private const int ofs_BPItem = 0x52FA;
     //private const int ofs_BPTutor = 0x54DE;
@@ -43,6 +141,13 @@ public partial class MartEditor7UU : Form
     private readonly string[] itemlist = Main.Config.GetText(TextName.ItemNames);
     //private readonly string[] movelist = Main.Config.GetText(TextName.MoveNames);
     private readonly byte[] data;
+
+    private const int RareCandyItemID = 50;
+    private const int RareCandyPrice = 10;
+    private const int RegularMartCount = 8;
+
+    private bool setRareCandyPriceOnSave;
+    private Button B_AddRareCandies;
 
     #region Tables
     private readonly string[] locations =
@@ -85,7 +190,12 @@ public partial class MartEditor7UU : Form
     private void B_Save_Click(object sender, EventArgs e)
     {
         if (entryItem > -1) SetListItem();
+
         if (entryBPItem > -1) SetListBPItem();
+
+        if (setRareCandyPriceOnSave)
+            SetItemPrice(GetRareCandyItemID(), RareCandyPrice);
+
         File.WriteAllBytes(CROPath, data);
         Close();
     }
