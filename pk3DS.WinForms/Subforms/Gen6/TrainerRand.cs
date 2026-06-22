@@ -9,9 +9,10 @@ namespace pk3DS.WinForms;
 
 public partial class TrainerRand : Form
 {
-    public TrainerRand()
+    public TrainerRand(List<TrainerLevelCapRule> levelCapRules = null)
     {
         InitializeComponent();
+        LevelCapRules = levelCapRules?.Select(r => r.Clone()).ToList() ?? [];
         AddProgressiveBSTControls();
         CB_Moves.SelectedIndex = 1;
         var trClassnorep = new List<string>();
@@ -206,8 +207,15 @@ public partial class TrainerRand : Form
 
     private CheckBox CHK_ProgressiveBST;
     private Button B_SetManualBST;
+    private CheckBox CHK_LevelCaps;
+    private Button B_SetLevelCaps;
 
     private List<ProgressiveBSTRule> ProgressiveBSTRules = GetDefaultProgressiveBSTRules();
+    private List<TrainerLevelCapRule> LevelCapRules = [];
+    private bool ApplyCapsToPreviousTrainers = true;
+    private int PreviousTrainerGap = 2;
+    private decimal RegularTrainerCurvePower = 1.6m;
+    private bool GuaranteeMegaInImportantBattles = false;
 
 
     private void B_Close_Click(object sender, EventArgs e)
@@ -228,6 +236,12 @@ public partial class TrainerRand : Form
             .ToList();
         RSTE.rLevel = CHK_Level.Checked;
         RSTE.rLevelMultiplier = NUD_Level.Value;
+        RSTE.rUseLevelCaps = CHK_LevelCaps.Checked;
+        RSTE.rLevelCapRules = LevelCapRules.Select(r => r.Clone()).ToList();
+        RSTE.rLevelCapsApplyPrevious = ApplyCapsToPreviousTrainers;
+        RSTE.rLevelCapPreviousGap = PreviousTrainerGap;
+        RSTE.rLevelCapCurvePower = RegularTrainerCurvePower;
+        RSTE.rLevelCapsGuaranteeMega = GuaranteeMegaInImportantBattles;
         RSTE.rNoFixedDamage = CHK_NoFixedDamage.Checked;
 
         RSTE.rMove = CB_Moves.SelectedIndex == 1;
@@ -310,6 +324,24 @@ public partial class TrainerRand : Form
         RandSettings.SetFormSettings(this, Controls);
         Close();
     }
+    private void ShowLevelCapDialog()
+    {
+        if (LevelCapRules.Count == 0)
+        {
+            WinFormsUtil.Alert("No important trainers were detected for this game.");
+            return;
+        }
+
+        TrainerLevelCapDialog.Edit(
+            this,
+            ref LevelCapRules,
+            ref ApplyCapsToPreviousTrainers,
+            ref PreviousTrainerGap,
+            ref RegularTrainerCurvePower,
+            ref GuaranteeMegaInImportantBattles
+        );
+    }
+
     private void AddProgressiveBSTControls()
     {
         // Hacer la ventana más ancha para que quepa el botón manual.
@@ -370,6 +402,44 @@ public partial class TrainerRand : Form
 
         CHK_ProgressiveBST.BringToFront();
         B_SetManualBST.BringToFront();
+
+        CHK_LevelCaps = new CheckBox
+        {
+            AutoSize = true,
+            Location = new System.Drawing.Point(220, CHK_Level.Top),
+            Name = "CHK_LevelCaps",
+            TabIndex = 1001,
+            Text = "Level Caps",
+            UseVisualStyleBackColor = true,
+            Enabled = LevelCapRules.Count > 0,
+        };
+
+        B_SetLevelCaps = new Button
+        {
+            Location = new System.Drawing.Point(330, CHK_Level.Top - 3),
+            Name = "B_SetLevelCaps",
+            Size = new System.Drawing.Size(145, 23),
+            TabIndex = 1002,
+            Text = "Set level caps",
+            UseVisualStyleBackColor = true,
+            Enabled = false,
+        };
+
+        CHK_LevelCaps.CheckedChanged += (_, _) =>
+        {
+            B_SetLevelCaps.Enabled = CHK_LevelCaps.Checked && LevelCapRules.Count > 0;
+        };
+
+        B_SetLevelCaps.Click += (_, _) => ShowLevelCapDialog();
+
+        Controls.Add(CHK_LevelCaps);
+        Controls.Add(B_SetLevelCaps);
+        CHK_LevelCaps.BringToFront();
+        B_SetLevelCaps.BringToFront();
+
+        int requiredTopWidth = B_SetLevelCaps.Right + 16;
+        if (ClientSize.Width < requiredTopWidth)
+            ClientSize = new System.Drawing.Size(requiredTopWidth, ClientSize.Height);
 
         int requiredGroupWidth = B_SetManualBST.Right + 12;
 

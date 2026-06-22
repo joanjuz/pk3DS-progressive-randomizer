@@ -454,7 +454,11 @@ public partial class RSTE : Form
     rTypeTheme, rTypeGymTrainers, rOnlySingles, rDMG, rSTAB, r6PKM, rForceFullyEvolved;
 
     public static bool rNoFixedDamage;
+    public static bool rUseLevelCaps, rLevelCapsApplyPrevious, rLevelCapsGuaranteeMega;
+    public static int rLevelCapPreviousGap;
+    public static decimal rLevelCapCurvePower;
     public static List<ProgressiveBSTRule> rProgressiveBSTRules = [];
+    public static List<TrainerLevelCapRule> rLevelCapRules = [];
     internal static bool[] rThemedClasses = [];
     private static string[] rTags;
     private static int[] megaEvos;
@@ -469,16 +473,67 @@ public partial class RSTE : Form
     public static int[] sL; // Random Species List
     public static decimal rGiftPercent, rLevelMultiplier, rMinPKM, rMaxPKM, rForceFullyEvolvedLevel, rForceHighPowerLevel;
 
+    private List<TrainerLevelCapRule> GetLevelCapCandidates()
+    {
+        rImportant = new string[CB_TrainerID.Items.Count];
+        Tags.Clear();
+        _ = Main.Config.ORAS ? GetTagsORAS() : GetTagsXY();
+
+        var candidates = new List<TrainerLevelCapRule>();
+        for (int i = 1; i < rImportant.Length && i < trdata.Length; i++)
+        {
+            if (string.IsNullOrWhiteSpace(rImportant[i]) || trpoke[i].Length == 0)
+                continue;
+
+            var trainer = new TrainerData6(trdata[i], trpoke[i], Main.Config.ORAS);
+            if (trainer.Team.Length == 0)
+                continue;
+
+            candidates.Add(new TrainerLevelCapRule
+            {
+                Enabled = true,
+                TrainerID = i,
+                Group = rImportant[i],
+                Trainer = GetTrainerDisplayName(i, trainer.Class),
+                CurrentAceLevel = GetAceLevel(trainer),
+                LevelCap = 0,
+            });
+        }
+
+        Tags.Clear();
+        return candidates
+            .OrderBy(r => r.CurrentAceLevel)
+            .ThenBy(r => r.TrainerID)
+            .ToList();
+    }
+
+    private string GetTrainerDisplayName(int trainerID, int trainerClass)
+    {
+        string name = trainerID < trName.Length ? trName[trainerID] : string.Empty;
+        string cls = trainerClass < trClass.Length ? trClass[trainerClass] : string.Empty;
+
+        if (string.IsNullOrWhiteSpace(name))
+            name = "UNKNOWN";
+        if (string.IsNullOrWhiteSpace(cls))
+            return name;
+
+        return $"{cls} {name}";
+    }
+
     private void B_Randomize_Click(object sender, EventArgs e)
     {
         rPKM = rMove = rMetronome = rAbility = rDiffAI = rDiffIV = rClass = rGift = rItem = rDoRand = false;
         rSmart = rProgressiveBST = false;
+        rUseLevelCaps = rLevelCapsApplyPrevious = rLevelCapsGuaranteeMega = false;
+        rLevelCapPreviousGap = 2;
+        rLevelCapCurvePower = 1.6m;
         rProgressiveBSTRules = [];
+        rLevelCapRules = [];
 
         rGiftPercent = 0;
         rForceFullyEvolvedLevel = 0;
 
-        new TrainerRand().ShowDialog();
+        new TrainerRand(GetLevelCapCandidates()).ShowDialog();
 
         if (rDoRand)
             Randomize();
@@ -505,7 +560,8 @@ public partial class RSTE : Form
 
         // Fetch Move Stats for more difficult randomization
 
-        if (rEnsureMEvo.Length > 0)
+        bool guaranteeAnyMega = rEnsureMEvo.Length > 0 || (rUseLevelCaps && rLevelCapsGuaranteeMega && rLevelCapRules.Any(r => r.Enabled));
+        if (guaranteeAnyMega)
         {
             if (mEvoTypes.Length < 13 && rTypeTheme)
             {
@@ -558,11 +614,12 @@ public partial class RSTE : Form
         ushort[] itemvals = Main.Config.ORAS ? Legal.Pouch_Items_AO : Legal.Pouch_Items_XY;
         itemvals = [.. itemvals, .. Legal.Pouch_Berry_XY];
 
+        var levelCapStages = BuildLevelCapStages();
+
         for (int i = 1; i < CB_TrainerID.Items.Count; i++)
         {
             // Trainer Type/Mega Evo
             int type = GetRandomType(i);
-            bool mevo = rEnsureMEvo.Contains(i);
             bool isImportantClass = rImportant[i] != null && (rImportant[i].Contains("GYM") || rImportant[i].Contains("ELITE") || rImportant[i].Contains("CHAMPION"));
             bool typerand = (rTypeTheme && !rGymE4Only) || (rTypeTheme && isImportantClass);
 
@@ -576,11 +633,15 @@ public partial class RSTE : Form
                 Item = rItem || checkBox_Item.Checked,
             };
 
+            int trainerAce = GetAceLevel(t);
+            bool mevo = ShouldGuaranteeMega(i, trainerAce, levelCapStages);
+            int? targetLevel = GetTrainerTargetLevel(i, trainerAce, levelCapStages, out bool forceExactLevel);
+
             SetMinMaxPKM(t);
             SetFullParties(t, rImportant[i] == null);
             RandomizeTrainerAIClass(t, trClass);
             RandomizeTrainerPrizeItem(t);
-            RandomizeTeam(t, move, learn, itemvals, type, mevo, typerand);
+            RandomizeTeam(t, move, learn, itemvals, type, mevo, typerand, targetLevel, forceExactLevel, trainerAce);
 
             trdata[i] = t.Write();
             trpoke[i] = t.WriteTeam();
@@ -588,6 +649,116 @@ public partial class RSTE : Form
         CB_TrainerID.SelectedIndex = 1;
         WinFormsUtil.Alert("Randomized all Trainers according to specification!", "Press the Dump to .TXT button to view the new Trainer information!");
     }
+    private List<TrainerLevelCapStage> BuildLevelCapStages()
+    {
+        if (!rUseLevelCaps || rLevelCapRules.Count == 0)
+            return [];
+
+        var stages = new List<TrainerLevelCapStage>();
+        foreach (var rule in rLevelCapRules.Where(r => r.Enabled))
+        {
+            if (rule.TrainerID <= 0 || rule.TrainerID >= trdata.Length || trpoke[rule.TrainerID].Length == 0)
+                continue;
+
+            var trainer = new TrainerData6(trdata[rule.TrainerID], trpoke[rule.TrainerID], Main.Config.ORAS);
+            int ace = GetAceLevel(trainer);
+            int cap = rule.LevelCap == 0 ? ace : rule.LevelCap;
+
+            stages.Add(new TrainerLevelCapStage
+            {
+                TrainerID = rule.TrainerID,
+                OriginalAceLevel = ace,
+                LevelCap = ClampLevel(cap),
+            });
+        }
+
+        return stages
+            .OrderBy(s => s.OriginalAceLevel)
+            .ThenBy(s => s.TrainerID)
+            .ToList();
+    }
+
+    private static int GetAceLevel(TrainerData6 trainer)
+    {
+        return trainer.Team.Length == 0 ? 1 : trainer.Team.Max(pk => pk.Level);
+    }
+
+    private static int? GetTrainerTargetLevel(int trainerID, int trainerAce, List<TrainerLevelCapStage> stages, out bool forceExactLevel)
+    {
+        forceExactLevel = false;
+
+        if (!rUseLevelCaps || stages.Count == 0)
+            return null;
+
+        if (IsProtectedOpeningBattle(trainerAce))
+            return null;
+
+        var exact = stages.FirstOrDefault(s => s.TrainerID == trainerID);
+        if (exact is not null)
+        {
+            forceExactLevel = true;
+            return exact.LevelCap;
+        }
+
+        if (!rLevelCapsApplyPrevious)
+            return null;
+
+        var next = stages.FirstOrDefault(s => trainerAce <= s.OriginalAceLevel);
+        if (next is null)
+            return null;
+
+        int nextIndex = stages.IndexOf(next);
+        TrainerLevelCapStage previous = nextIndex > 0 ? stages[nextIndex - 1] : null;
+
+        int startAce = previous?.OriginalAceLevel ?? 5;
+        int startTarget = previous?.LevelCap ?? startAce;
+        int endAce = next.OriginalAceLevel;
+        int endTarget = ClampLevel(next.LevelCap - rLevelCapPreviousGap);
+
+        if (endAce <= startAce)
+            return endTarget;
+
+        double progress = Math.Clamp((trainerAce - startAce) / (double)(endAce - startAce), 0, 1);
+        double curvePower = Math.Clamp((double)rLevelCapCurvePower, 1.0, 4.0);
+        double curvedProgress = Math.Pow(progress, curvePower);
+        int target = (int)Math.Round(startTarget + ((endTarget - startTarget) * curvedProgress));
+
+        return ClampLevel(target);
+    }
+
+    private static bool ShouldGuaranteeMega(int trainerID, int trainerAce, List<TrainerLevelCapStage> stages)
+    {
+        if (IsProtectedOpeningBattle(trainerAce))
+            return false;
+
+        if (rEnsureMEvo.Contains(trainerID))
+            return true;
+
+        return rLevelCapsGuaranteeMega && stages.Any(s => s.TrainerID == trainerID);
+    }
+
+    private static bool IsProtectedOpeningBattle(int trainerAce) => trainerAce <= 5;
+
+    private static int ClampLevel(int level)
+    {
+        if (level < 1)
+            return 1;
+        return level > 100 ? 100 : level;
+    }
+
+    private static ushort ApplyLevelTarget(ushort currentLevel, int? targetLevel, bool forceExactLevel, int trainerAce)
+    {
+        if (targetLevel is null)
+            return currentLevel;
+
+        int target = ClampLevel(targetLevel.Value);
+        if (forceExactLevel)
+            return (ushort)target;
+
+        int delta = target - trainerAce;
+        return (ushort)ClampLevel(currentLevel + delta);
+    }
+
     private static ProgressiveBSTRule GetProgressiveBSTRule(int level)
     {
         var rule = rProgressiveBSTRules.FirstOrDefault(r =>
@@ -626,13 +797,19 @@ public partial class RSTE : Form
             rule.MaxBST
         );
     }
-    private static void RandomizeTeam(TrainerData6 t, MoveRandomizer move, LearnsetRandomizer learn, ushort[] itemvals, int type, bool mevo, bool typerand)
+    private static void RandomizeTeam(TrainerData6 t, MoveRandomizer move, LearnsetRandomizer learn, ushort[] itemvals, int type, bool mevo, bool typerand, int? targetLevel, bool forceExactLevel, int trainerAce)
     {
         int last = t.Team.Length - 1;
         for (int p = 0; p < t.Team.Length; p++)
         {
             var pk = t.Team[p];
             int[] stones = null;
+
+            if (targetLevel is not null)
+                pk.Level = ApplyLevelTarget(pk.Level, targetLevel, forceExactLevel, trainerAce);
+            else if (rLevel)
+                pk.Level = (ushort)Randomizer.GetModifiedLevel(pk.Level, rLevelMultiplier);
+
             if (rPKM)
             {
                 // randomize pokemon
@@ -679,8 +856,14 @@ public partial class RSTE : Form
                 bool mega = rRandomMegas && !(mevo && p == last); // except if mega evolution is forced for the last slot
                 pk.Form = (ushort)Randomizer.GetRandomForme(pk.Species, mega, true, Main.SpeciesStat);
             }
-            if (rLevel)
-                pk.Level = (ushort)Randomizer.GetModifiedLevel(pk.Level, rLevelMultiplier);
+
+            if (mevo && p == last && stones == null)
+            {
+                stones = GetRandomMegaForType(type, typerand, out int species);
+                pk.Species = (ushort)species;
+                pk.Form = 0; // force the held stone to trigger a natural Mega Evolution
+            }
+
             if (rAbility)
                 pk.Ability = (int)(1 + (Rand() % 3));
             if (rDiffIV)
@@ -984,14 +1167,14 @@ public partial class RSTE : Form
     // Theme Methods
     private void TagTrainer(string[] trTags, string tag, params int[] ids)
     {
-        foreach (int id in ids.Where(id => id < trTags.Length))
+        foreach (int id in ids.Where(id => id >= 0 && id < trTags.Length))
             trTags[id] = tag;
 
         if (!Tags.Contains(tag))
             Tags.Add(tag);
 
         if (!ImportantTrainers) return;
-        foreach (int id in ids)
+        foreach (int id in ids.Where(id => id >= 0 && id < rImportant.Length))
             rImportant[id] = tag;
     }
 
@@ -1002,6 +1185,19 @@ public partial class RSTE : Form
         int rnd = Util.Rand.Next(0, MegaDictionary.Count - 1);
         species = MegaDictionary.Keys.ElementAt(rnd);
         return MegaDictionary.Values.ElementAt(rnd);
+    }
+
+    private static int[] GetRandomMegaForType(int type, bool requireType, out int species)
+    {
+        int[] stones;
+        int tries = 0;
+        do
+        {
+            stones = GetRandomMega(out species);
+        }
+        while (requireType && type >= 0 && Main.Config.Personal[species].Types.All(z => z != type) && tries++ < 100);
+
+        return stones;
     }
 
     private int GetRandomType(int trainer)

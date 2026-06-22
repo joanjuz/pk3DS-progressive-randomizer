@@ -29,8 +29,15 @@ public partial class SMTE : Form
     private CheckBox[] AIBits;
     private CheckBox CHK_ProgressiveBST;
     private Button B_SetManualBST;
+    private CheckBox CHK_LevelCaps;
+    private Button B_SetLevelCaps;
 
     private List<ProgressiveBSTRule> ProgressiveBSTRules = GetDefaultProgressiveBSTRules();
+    private List<TrainerLevelCapRule> LevelCapRules = [];
+    private bool ApplyCapsToPreviousTrainers = true;
+    private int PreviousTrainerGap = 2;
+    private decimal RegularTrainerCurvePower = 1.6m;
+    private bool GuaranteeMegaInImportantBattles = false;
 
 
     //private readonly byte[][] trclass;
@@ -62,6 +69,8 @@ public partial class SMTE : Form
         mnuDelete.Click += ClickDelete;
         Trainers = new TrainerData7[trdata.Length];
         Setup();
+        LevelCapRules = GetLevelCapCandidates();
+        AddLevelCapControls();
         foreach (var pb in pba)
             pb.Click += ClickSlot;
 
@@ -312,6 +321,59 @@ public partial class SMTE : Form
             rule.MaxBST
         );
     }
+    private List<TrainerLevelCapRule> GetLevelCapCandidates()
+    {
+        var candidates = new List<TrainerLevelCapRule>();
+
+        foreach (int id in ImportantTrainers.Where(id => id > 0 && id < Trainers.Length))
+        {
+            var trainer = Trainers[id];
+            if (trainer.Pokemon.Count == 0)
+                continue;
+
+            candidates.Add(new TrainerLevelCapRule
+            {
+                Enabled = true,
+                TrainerID = id,
+                Group = "Important",
+                Trainer = GetTrainerDisplayName(trainer),
+                CurrentAceLevel = GetAceLevel(trainer),
+                LevelCap = 0,
+            });
+        }
+
+        return candidates
+            .OrderBy(r => r.CurrentAceLevel)
+            .ThenBy(r => r.TrainerID)
+            .ToList();
+    }
+
+    private string GetTrainerDisplayName(TrainerData7 trainer)
+    {
+        string name = string.IsNullOrWhiteSpace(trainer.Name) ? "UNKNOWN" : trainer.Name;
+        string cls = trainer.TrainerClass < trClass.Length ? trClass[trainer.TrainerClass] : string.Empty;
+
+        return string.IsNullOrWhiteSpace(cls) ? name : $"{cls} {name}";
+    }
+
+    private void ShowLevelCapDialog()
+    {
+        if (LevelCapRules.Count == 0)
+        {
+            WinFormsUtil.Alert("No important trainers were detected for this game.");
+            return;
+        }
+
+        TrainerLevelCapDialog.Edit(
+            this,
+            ref LevelCapRules,
+            ref ApplyCapsToPreviousTrainers,
+            ref PreviousTrainerGap,
+            ref RegularTrainerCurvePower,
+            ref GuaranteeMegaInImportantBattles
+        );
+    }
+
     private int GetSlot(object sender)
     {
         var send = ((sender as ToolStripItem)?.Owner as ContextMenuStrip)?.SourceControl ?? sender as PictureBox;
@@ -865,6 +927,115 @@ public partial class SMTE : Form
 
     private static readonly int[] usualBan = [165, 621, 464];
 
+    private List<TrainerLevelCapStage> BuildLevelCapStages()
+    {
+        if (!CHK_LevelCaps.Checked || LevelCapRules.Count == 0)
+            return [];
+
+        var stages = new List<TrainerLevelCapStage>();
+        foreach (var rule in LevelCapRules.Where(r => r.Enabled))
+        {
+            if (rule.TrainerID <= 0 || rule.TrainerID >= Trainers.Length)
+                continue;
+
+            var trainer = Trainers[rule.TrainerID];
+            if (trainer.Pokemon.Count == 0)
+                continue;
+
+            int ace = GetAceLevel(trainer);
+            int cap = rule.LevelCap == 0 ? ace : rule.LevelCap;
+
+            stages.Add(new TrainerLevelCapStage
+            {
+                TrainerID = rule.TrainerID,
+                OriginalAceLevel = ace,
+                LevelCap = ClampLevel(cap),
+            });
+        }
+
+        return stages
+            .OrderBy(s => s.OriginalAceLevel)
+            .ThenBy(s => s.TrainerID)
+            .ToList();
+    }
+
+    private static int GetAceLevel(TrainerData7 trainer)
+    {
+        return trainer.Pokemon.Count == 0 ? 1 : trainer.Pokemon.Max(pk => pk.Level);
+    }
+
+    private int? GetTrainerTargetLevel(int trainerID, int trainerAce, List<TrainerLevelCapStage> stages, out bool forceExactLevel)
+    {
+        forceExactLevel = false;
+
+        if (!CHK_LevelCaps.Checked || stages.Count == 0)
+            return null;
+
+        if (IsProtectedOpeningBattle(trainerAce))
+            return null;
+
+        var exact = stages.FirstOrDefault(s => s.TrainerID == trainerID);
+        if (exact is not null)
+        {
+            forceExactLevel = true;
+            return exact.LevelCap;
+        }
+
+        if (!ApplyCapsToPreviousTrainers)
+            return null;
+
+        var next = stages.FirstOrDefault(s => trainerAce <= s.OriginalAceLevel);
+        if (next is null)
+            return null;
+
+        int nextIndex = stages.IndexOf(next);
+        TrainerLevelCapStage previous = nextIndex > 0 ? stages[nextIndex - 1] : null;
+
+        int startAce = previous?.OriginalAceLevel ?? 5;
+        int startTarget = previous?.LevelCap ?? startAce;
+        int endAce = next.OriginalAceLevel;
+        int endTarget = ClampLevel(next.LevelCap - PreviousTrainerGap);
+
+        if (endAce <= startAce)
+            return endTarget;
+
+        double progress = Math.Clamp((trainerAce - startAce) / (double)(endAce - startAce), 0, 1);
+        double curvePower = Math.Clamp((double)RegularTrainerCurvePower, 1.0, 4.0);
+        double curvedProgress = Math.Pow(progress, curvePower);
+        int target = (int)Math.Round(startTarget + ((endTarget - startTarget) * curvedProgress));
+
+        return ClampLevel(target);
+    }
+
+    private bool ShouldGuaranteeMega(int trainerID, int trainerAce, List<TrainerLevelCapStage> stages)
+    {
+        return GuaranteeMegaInImportantBattles
+            && !IsProtectedOpeningBattle(trainerAce)
+            && stages.Any(s => s.TrainerID == trainerID);
+    }
+
+    private static bool IsProtectedOpeningBattle(int trainerAce) => trainerAce <= 5;
+
+    private static int ClampLevel(int level)
+    {
+        if (level < 1)
+            return 1;
+        return level > 100 ? 100 : level;
+    }
+
+    private static int ApplyLevelTarget(int currentLevel, int? targetLevel, bool forceExactLevel, int trainerAce)
+    {
+        if (targetLevel is null)
+            return currentLevel;
+
+        int target = ClampLevel(targetLevel.Value);
+        if (forceExactLevel)
+            return target;
+
+        int delta = target - trainerAce;
+        return ClampLevel(currentLevel + delta);
+    }
+
     private void B_Randomize_Click(object sender, EventArgs e)
     {
         if (WinFormsUtil.Prompt(MessageBoxButtons.YesNo, "Randomize all? Cannot undo.", "Double check Randomization settings in the Randomizer Options tab.") != DialogResult.Yes) return;
@@ -903,11 +1074,15 @@ public partial class SMTE : Form
         };
 
         var items = Randomizer.GetRandomItemList();
+        var levelCapStages = BuildLevelCapStages();
+
         for (int i = 0; i < Trainers.Length; i++)
         {
             var tr = Trainers[i];
             if (tr.Pokemon.Count == 0)
                 continue;
+
+            int trainerAce = GetAceLevel(tr);
 
             // Trainer Properties
             if (CHK_RandomClass.Checked)
@@ -979,17 +1154,27 @@ public partial class SMTE : Form
             if (royal.Contains(tr.ID))
                 tr.NumPokemon = 1;
 
+            int? targetLevel = GetTrainerTargetLevel(tr.ID, trainerAce, levelCapStages, out bool forceExactLevel);
+            bool forceMega = ShouldGuaranteeMega(tr.ID, trainerAce, levelCapStages);
+
             // PKM Properties
-            foreach (var pk in tr.Pokemon)
+            for (int p = 0; p < tr.Pokemon.Count; p++)
             {
+                var pk = tr.Pokemon[p];
+                if (targetLevel is not null)
+                    pk.Level = ApplyLevelTarget(pk.Level, targetLevel, forceExactLevel, trainerAce);
+                else if (CHK_Level.Checked)
+                    pk.Level = Randomizer.GetModifiedLevel(pk.Level, NUD_LevelBoost.Value);
+
                 if (CHK_RandomPKM.Checked)
                 {
                     int Type = CHK_TypeTheme.Checked ? (int)Util.Random32() % 17 : -1;
+                    bool forceMegaSlot = forceMega && p == tr.Pokemon.Count - 1;
 
                     // replaces Megas with another Mega (Dexio and Lysandre in USUM)
-                    if (MegaDictionary.Values.Any(z => z.Contains(pk.Item)))
+                    if (MegaDictionary.Values.Any(z => z.Contains(pk.Item)) || forceMegaSlot)
                     {
-                        int[] mega = GetRandomMega(out int species);
+                        int[] mega = GetRandomMegaForType(Type, CHK_TypeTheme.Checked, out int species);
                         pk.Species = species;
                         pk.Item = mega[Util.Rand.Next(0, mega.Length)];
                         pk.Form = 0; // allow it to Mega Evolve naturally
@@ -1032,8 +1217,16 @@ public partial class SMTE : Form
                     pk.Gender = 0; // random
                     pk.Nature = (int)(Util.Random32() % CB_Nature.Items.Count); // random
                 }
-                if (CHK_Level.Checked)
-                    pk.Level = Randomizer.GetModifiedLevel(pk.Level, NUD_LevelBoost.Value);
+
+                if (forceMega && !CHK_RandomPKM.Checked && p == tr.Pokemon.Count - 1)
+                {
+                    int Type = CHK_TypeTheme.Checked ? (int)Util.Random32() % 17 : -1;
+                    int[] mega = GetRandomMegaForType(Type, CHK_TypeTheme.Checked, out int species);
+                    pk.Species = species;
+                    pk.Item = mega[Util.Rand.Next(0, mega.Length)];
+                    pk.Form = 0; // allow it to Mega Evolve naturally
+                }
+
                 if (CHK_RandomShiny.Checked)
                     pk.Shiny = Util.Rand.Next(0, 100 + 1) < NUD_Shiny.Value;
                 if (CHK_RandomAbilities.Checked)
@@ -1123,6 +1316,45 @@ public partial class SMTE : Form
         Tab_PKM1.Controls.Add(CHK_ProgressiveBST);
         Tab_PKM1.Controls.Add(B_SetManualBST);
     }
+    private void AddLevelCapControls()
+    {
+        int y = CHK_ProgressiveBST.Bottom + 6;
+
+        CHK_LevelCaps = new CheckBox
+        {
+            AutoSize = true,
+            Location = new Point(CHK_BST.Left, y),
+            Name = "CHK_LevelCaps",
+            TabIndex = 1001,
+            Text = "Level Caps",
+            UseVisualStyleBackColor = true,
+            Enabled = LevelCapRules.Count > 0,
+        };
+
+        B_SetLevelCaps = new Button
+        {
+            Location = new Point(CHK_BST.Left + 100, y - 3),
+            Name = "B_SetLevelCaps",
+            Size = new Size(92, 23),
+            TabIndex = 1002,
+            Text = "Set caps",
+            UseVisualStyleBackColor = true,
+            Enabled = false,
+        };
+
+        CHK_LevelCaps.CheckedChanged += (_, _) =>
+        {
+            B_SetLevelCaps.Enabled = CHK_LevelCaps.Checked && LevelCapRules.Count > 0;
+        };
+
+        B_SetLevelCaps.Click += (_, _) => ShowLevelCapDialog();
+
+        Tab_PKM1.Controls.Add(CHK_LevelCaps);
+        Tab_PKM1.Controls.Add(B_SetLevelCaps);
+        CHK_LevelCaps.BringToFront();
+        B_SetLevelCaps.BringToFront();
+    }
+
     private void B_HighAttack_Click(object sender, EventArgs e)
     {
         pkm.Species = CB_Species.SelectedIndex;
@@ -1213,5 +1445,18 @@ public partial class SMTE : Form
         int rnd = Util.Rand.Next(0, MegaDictionary.Count - 1);
         species = MegaDictionary.Keys.ElementAt(rnd);
         return MegaDictionary.Values.ElementAt(rnd);
+    }
+
+    private static int[] GetRandomMegaForType(int type, bool requireType, out int species)
+    {
+        int[] stones;
+        int tries = 0;
+        do
+        {
+            stones = GetRandomMega(out species);
+        }
+        while (requireType && type >= 0 && Main.Config.Personal[species].Types.All(z => z != type) && tries++ < 100);
+
+        return stones;
     }
 }

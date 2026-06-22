@@ -1,0 +1,34 @@
+diff --git a/pk3DS.WinForms/Subforms/Gen6/TrainerLevelCapDialog.cs b/pk3DS.WinForms/Subforms/Gen6/TrainerLevelCapDialog.cs
+index 82e5a00..cfca930 100644
+--- a/pk3DS.WinForms/Subforms/Gen6/TrainerLevelCapDialog.cs
++++ b/pk3DS.WinForms/Subforms/Gen6/TrainerLevelCapDialog.cs
+@@ -21,7 +21,7 @@ public static class TrainerLevelCapDialog
+         {
+             Text = "Trainer Level Caps",
+             StartPosition = FormStartPosition.CenterParent,
+-            Size = new Size(840, 520),
++            Size = new Size(840, 560),
+             MinimizeBox = false,
+             MaximizeBox = false,
+             FormBorderStyle = FormBorderStyle.FixedDialog,
+@@ -88,9 +88,10 @@ public static class TrainerLevelCapDialog
+         var options = new FlowLayoutPanel
+         {
+             Dock = DockStyle.Top,
+-            Height = 68,
++            Height = 98,
+             Padding = new Padding(8, 6, 8, 4),
+             FlowDirection = FlowDirection.LeftToRight,
++            WrapContents = true,
+         };
+ 
+         var chkPrevious = new CheckBox
+@@ -158,7 +159,7 @@ public static class TrainerLevelCapDialog
+             Height = 38,
+             TextAlign = ContentAlignment.MiddleLeft,
+             Padding = new Padding(8, 0, 8, 0),
+-            Text = "LevelCap 0 uses the trainer's current ace. Selected trainers are homogenized to the cap. Regular trainers ramp organically toward the next cap - gap. Ace level 5 opening rival fights are protected.",
++            Text = "LevelCap 0 uses the trainer's current ace. Selected trainers are homogenized to the cap. Regular trainers ramp organically toward the next cap - gap. Ace level 5 opening rival fights are protected. Mega option applies only to selected important trainers.",
+         };
+ 
+         var buttons = new FlowLayoutPanel
