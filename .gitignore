@@ -244,4 +244,16 @@ MapImages/
 *.nds
 publish/
 bin/
-obj/
+obj/catch_zone_templates/
+publish/
+release_v3.8/
+mapGR/
+encdata/
+mapMatrix/
+MapImages/
+*_g/
+*.3ds
+*.cia
+*.cxi
+*.cci
+*.pdb
