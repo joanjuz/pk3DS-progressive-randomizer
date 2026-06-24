@@ -230,3 +230,18 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 /.vs
+
+catch_zone_templates/
+mapGR/
+encdata/
+mapMatrix/
+MapImages/
+*_g/
+*.cia
+*.3ds
+*.cxi
+*.cci
+*.nds
+publish/
+bin/
+obj/

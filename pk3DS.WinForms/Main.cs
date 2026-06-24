@@ -32,6 +32,7 @@ public sealed partial class Main : Form
     {
         // Initialize the Main Form
         InitializeComponent();
+        EnsureCatchZonesButtonVisible();
 
         // Prepare DragDrop Functionality
         AllowDrop = TB_Path.AllowDrop = true;
@@ -70,6 +71,27 @@ public sealed partial class Main : Form
         const string randset = RandSettings.FileName;
         if (File.Exists(randset))
             RandSettings.Load(File.ReadAllLines(randset));
+    }
+
+    private void EnsureCatchZonesButtonVisible()
+    {
+        if (FLP_RomFS == null || B_CatchZones == null)
+            return;
+
+        B_CatchZones.Text = "Enable Catch Zones";
+        B_CatchZones.Size = new System.Drawing.Size(120, 23);
+        B_CatchZones.Visible = true;
+        B_CatchZones.Enabled = true;
+
+        if (FLP_RomFS.Controls.Contains(B_CatchZones))
+            FLP_RomFS.Controls.Remove(B_CatchZones);
+
+        int index = FLP_RomFS.Controls.Contains(B_Wild)
+            ? FLP_RomFS.Controls.GetChildIndex(B_Wild) + 1
+            : FLP_RomFS.Controls.Count;
+
+        FLP_RomFS.Controls.Add(B_CatchZones);
+        FLP_RomFS.Controls.SetChildIndex(B_CatchZones, Math.Min(index, FLP_RomFS.Controls.Count - 1));
     }
 
     internal static GameConfig Config;
@@ -448,7 +470,7 @@ public sealed partial class Main : Form
         switch (Config.Generation)
         {
             case 6:
-                romfs = [B_GameText, B_StoryText, B_Personal, B_Evolution, B_LevelUp, B_Wild, B_MegaEvo, B_EggMove, B_Trainer, B_Item, B_Move, B_Maison, B_TitleScreen, B_OWSE,
+                romfs = [B_GameText, B_StoryText, B_Personal, B_Evolution, B_LevelUp, B_Wild,B_CatchZones, B_MegaEvo, B_EggMove, B_Trainer, B_Item, B_Move, B_Maison, B_TitleScreen, B_OWSE,
                 ];
                 exefs = [B_MoveTutor, B_TMHM, B_Mart, B_Pickup, B_OPower, B_ShinyRate];
                 cro = [B_TypeChart, B_Starter, B_Gift, B_Static];
@@ -864,6 +886,55 @@ public sealed partial class Main : Form
                     break;
                 default:
                     return;
+            }
+        }).Start();
+    }
+
+    private void B_CatchZones_Click(object sender, EventArgs e)
+    {
+        if (ThreadActive())
+            return;
+        if (Config?.XY != true && Config?.ORAS != true)
+        {
+            WinFormsUtil.Alert("Catch-zone templates are only available for XY/ORAS.");
+            return;
+        }
+        if (!CatchZoneTemplateSync.HasAnyTemplateForCurrentGame())
+        {
+            WinFormsUtil.Alert("No catch-zone templates were found for this game. Expected folder: catch_zone_templates/XY or catch_zone_templates/ORAS next to pk3DS.exe.");
+            return;
+        }
+
+        if (DialogResult.Yes != WinFormsUtil.Prompt(MessageBoxButtons.YesNo,
+                "Apply catch-zone templates to this ROM?",
+                "This will overwrite Gen 6 encounter data and map graphics with the templates for the currently loaded game."))
+            return;
+
+        new Thread(() =>
+        {
+            string[] files = ["encdata", "mapGR"];
+            try
+            {
+                Invoke((MethodInvoker)delegate { Enabled = false; });
+                FileGet(files, false);
+                string catchZoneSyncReport = CatchZoneTemplateSync.ApplyCurrentGameTemplates(files);
+                if (!string.IsNullOrWhiteSpace(catchZoneSyncReport))
+                    UpdateStatus(catchZoneSyncReport.Replace(Environment.NewLine, " | "));
+                FileSet(files);
+
+                string rawSyncReport = CatchZoneTemplateSync.ApplyCurrentGameRawFiles(RomFSPath);
+                if (!string.IsNullOrWhiteSpace(rawSyncReport))
+                    UpdateStatus(rawSyncReport.Replace(Environment.NewLine, " | "));
+
+                Invoke(() => WinFormsUtil.Alert("Catch zones enabled for this ROM."));
+            }
+            catch (Exception ex)
+            {
+                Invoke(() => WinFormsUtil.Error("Failed to enable catch zones.", ex.Message));
+            }
+            finally
+            {
+                Invoke((MethodInvoker)delegate { Enabled = true; });
             }
         }).Start();
     }

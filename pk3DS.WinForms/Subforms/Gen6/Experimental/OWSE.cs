@@ -15,6 +15,7 @@ public sealed partial class OWSE : Form
     public OWSE()
     {
         InitializeComponent();
+        InitializeCityEncounterSeeder();
 
         // Script Drag&Drop
         AllowDrop = true;
@@ -32,6 +33,13 @@ public sealed partial class OWSE : Form
     private string[] encdatapaths;
     private byte[] masterZoneData;
     private bool debugToolDumping;
+
+    private Button B_SeedCurrentCityEncounters;
+    private Button B_SeedAllCityEncounters;
+    private Button B_DumpCurrentMapFiles;
+    private Button B_DumpAllMapFiles;
+    private CheckBox CHK_SeedOverwriteEncounters;
+    private Label L_CityEncounterSeeder;
 
     // Generated Storage
     private string[] zdLocations;
@@ -214,6 +222,452 @@ public sealed partial class OWSE : Form
         {
             RTB_OWSCMD.Lines = RTB_OS.Lines = ["No Data"];
         }
+    }
+
+    private void InitializeCityEncounterSeeder()
+    {
+        L_Encounters.Text = "Encounters are handled in the regular Wild Editor.\n"
+            + "This tool only injects the missing Encounter Data section; v4 will place actual grass tiles.";
+        L_Encounters.AutoSize = false;
+        L_Encounters.Size = new Size(440, 44);
+
+        B_SeedCurrentCityEncounters = new Button
+        {
+            Location = new Point(26, 78),
+            Name = "B_SeedCurrentCityEncounters",
+            Size = new Size(180, 28),
+            TabIndex = 1,
+            Text = "Seed current location",
+            UseVisualStyleBackColor = true,
+        };
+        B_SeedCurrentCityEncounters.Click += B_SeedCurrentCityEncounters_Click;
+
+        B_SeedAllCityEncounters = new Button
+        {
+            Location = new Point(214, 78),
+            Name = "B_SeedAllCityEncounters",
+            Size = new Size(180, 28),
+            TabIndex = 2,
+            Text = "Seed all city/town maps",
+            UseVisualStyleBackColor = true,
+        };
+        B_SeedAllCityEncounters.Click += B_SeedAllCityEncounters_Click;
+
+        CHK_SeedOverwriteEncounters = new CheckBox
+        {
+            AutoSize = true,
+            Location = new Point(26, 120),
+            Name = "CHK_SeedOverwriteEncounters",
+            Size = new Size(235, 17),
+            TabIndex = 3,
+            Text = "Overwrite maps that already have encounters",
+            UseVisualStyleBackColor = true,
+        };
+
+        B_DumpCurrentMapFiles = new Button
+        {
+            Location = new Point(26, 150),
+            Name = "B_DumpCurrentMapFiles",
+            Size = new Size(180, 28),
+            TabIndex = 4,
+            Text = "Dump current map files",
+            UseVisualStyleBackColor = true,
+        };
+        B_DumpCurrentMapFiles.Click += B_DumpCurrentMapFiles_Click;
+
+        B_DumpAllMapFiles = new Button
+        {
+            Location = new Point(214, 150),
+            Name = "B_DumpAllMapFiles",
+            Size = new Size(180, 28),
+            TabIndex = 5,
+            Text = "Dump all map files",
+            UseVisualStyleBackColor = true,
+        };
+        B_DumpAllMapFiles.Click += B_DumpAllMapFiles_Click;
+
+        L_CityEncounterSeeder = new Label
+        {
+            AutoSize = false,
+            Location = new Point(26, 190),
+            Name = "L_CityEncounterSeeder",
+            Size = new Size(440, 105),
+            TabIndex = 6,
+            Text = "V3 adds editable Grass encounter tables to city/town ZO files. "
+                + "V3.1 dumps the MapMatrix and mapGR files so you know which dec_XXXX.bin files to open in Ohana for v4 presets.",
+        };
+
+        tb_Encounters.Controls.Add(B_SeedCurrentCityEncounters);
+        tb_Encounters.Controls.Add(B_SeedAllCityEncounters);
+        tb_Encounters.Controls.Add(CHK_SeedOverwriteEncounters);
+        tb_Encounters.Controls.Add(B_DumpCurrentMapFiles);
+        tb_Encounters.Controls.Add(B_DumpAllMapFiles);
+        tb_Encounters.Controls.Add(L_CityEncounterSeeder);
+    }
+
+    private void B_DumpCurrentMapFiles_Click(object sender, EventArgs e)
+    {
+        if (CB_LocationID.SelectedIndex < 0 || CurrentZone?.ZD == null)
+            return;
+
+        int index = CB_LocationID.SelectedIndex;
+        var rows = new List<string> { GetMapDumpCsvHeader() };
+        rows.Add(BuildMapDumpRow(index));
+
+        const string path = "city_map_file_dump_current.csv";
+        File.WriteAllLines(path, rows);
+
+        string[] mapGRFiles = GetMapGRFilesForMatrix(CurrentZone.ZD.MapMatrix, out string result);
+        string files = mapGRFiles.Length == 0 ? result : string.Join(", ", mapGRFiles);
+        Clipboard.SetText(files);
+
+        WinFormsUtil.Alert(
+            $"Map file dump written to {path}\n\nLocation: {GetLocationLabel(index)}\nMapMatrix: {CurrentZone.ZD.MapMatrix}\nOpen in Ohana: {files}",
+            "The Ohana map file list was also copied to the clipboard.");
+    }
+
+    private void B_DumpAllMapFiles_Click(object sender, EventArgs e)
+    {
+        SetEntry();
+
+        var rows = new List<string> { GetMapDumpCsvHeader() };
+        int usable = 0;
+        int missing = 0;
+
+        for (int i = 0; i < filepaths.Length; i++)
+        {
+            string row = BuildMapDumpRow(i);
+            rows.Add(row);
+
+            if (row.Contains("Missing mapMatrix/mapGR data") || row.Contains("Invalid ZO file") || row.Contains("MapMatrix index out of range"))
+                missing++;
+            else
+                usable++;
+        }
+
+        const string path = "city_map_file_dump_all.csv";
+        File.WriteAllLines(path, rows);
+
+        WinFormsUtil.Alert(
+            $"Map file dump finished.\nUsable rows: {usable}\nRows needing review: {missing}",
+            $"Report written to {path}");
+    }
+
+    private string BuildMapDumpRow(int index)
+    {
+        string zoneFile = index >= 0 && index < filepaths.Length ? Path.GetFileName(filepaths[index]) : string.Empty;
+        string location = GetLocationLabel(index);
+        string zoneGarc = Main.Config.ORAS ? "a/0/1/3" : "a/0/1/2";
+        string mapGarc = Main.Config.ORAS ? "a/0/3/9" : "a/0/4/1";
+        string game = Main.Config.ORAS ? "ORAS" : "XY";
+
+        try
+        {
+            byte[] raw = File.ReadAllBytes(filepaths[index]);
+            byte[][] data = Mini.UnpackMini(raw, "ZO");
+            if (data == null || data.Length < 4)
+                return Csv(game, index, zoneFile, location, zoneGarc, string.Empty, string.Empty, string.Empty, mapGarc, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, "Invalid ZO file");
+
+            var zd = new ZoneData(data[0]);
+            string mapMatrixFile = GetIndexedFileName("mapMatrix", zd.MapMatrix);
+            string[] mapGRFiles = GetMapGRFilesForMatrix(zd.MapMatrix, out string result);
+            string mapGRList = mapGRFiles.Length == 0 ? string.Empty : string.Join(";", mapGRFiles);
+            string hasEncounters = HasRealEncounterData(data[3]).ToString(CultureInfo.InvariantCulture);
+            string likelyCity = IsLikelyOutdoorCityTown(index, zd).ToString(CultureInfo.InvariantCulture);
+            string flags = $"Fly={zd.IsFlyEnable};Bike={zd.IsBicycleEnable};Roller={zd.IsRollerSkateEnable}";
+
+            return Csv(game, index, zoneFile, location, zoneGarc, zd.TextFile, zd.MapMatrix, mapMatrixFile, mapGarc, mapGRList, hasEncounters, likelyCity, zd.PX, zd.PY, flags, result);
+        }
+        catch (Exception ex)
+        {
+            return Csv(game, index, zoneFile, location, zoneGarc, string.Empty, string.Empty, string.Empty, mapGarc, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, string.Empty, ex.Message);
+        }
+    }
+
+    private static string GetMapDumpCsvHeader()
+    {
+        return Csv(
+            "Game",
+            "ZoneIndex",
+            "ZoneFile",
+            "Location",
+            "ZoneGARC",
+            "TextFile",
+            "MapMatrixIndex",
+            "MapMatrixFile",
+            "MapGARCToOpenInOhana",
+            "MapGRFilesToOpenInOhana",
+            "HasEncounterData",
+            "LikelyOutdoorCityTown",
+            "PlayerX",
+            "PlayerY",
+            "MovementFlags",
+            "Result");
+    }
+
+    private static string[] GetMapGRFilesForMatrix(int mapMatrix, out string result)
+    {
+        result = "OK";
+        string[] matrixFiles = GetSortedFilesOrEmpty("mapMatrix");
+        string[] mapGRFiles = GetSortedFilesOrEmpty("mapGR");
+        if (matrixFiles.Length == 0 || mapGRFiles.Length == 0)
+        {
+            result = "Missing mapMatrix/mapGR data. Open Show Map once or unpack the mapMatrix and mapGR GARCs with pk3DS.";
+            return [];
+        }
+
+        if (mapMatrix < 0 || mapMatrix >= matrixFiles.Length)
+        {
+            result = "MapMatrix index out of range";
+            return [];
+        }
+
+        try
+        {
+            byte[][] matrixData = Mini.UnpackMini(File.ReadAllBytes(matrixFiles[mapMatrix]), "MM");
+            if (matrixData == null)
+            {
+                result = "Could not unpack MapMatrix";
+                return [];
+            }
+
+            var matrix = new MapMatrix(matrixData);
+            string[] files = matrix.EntryList
+                .Select(z => (int)z)
+                .Where(z => z != 0xFFFF && z >= 0 && z < mapGRFiles.Length)
+                .Distinct()
+                .OrderBy(z => z)
+                .Select(z => Path.GetFileName(mapGRFiles[z]))
+                .ToArray();
+
+            if (files.Length == 0)
+                result = "No mapGR entries referenced by this MapMatrix";
+
+            return files;
+        }
+        catch (Exception ex)
+        {
+            result = "MapMatrix read failed: " + ex.Message;
+            return [];
+        }
+    }
+
+    private static string GetIndexedFileName(string folder, int index)
+    {
+        string[] files = GetSortedFilesOrEmpty(folder);
+        return index >= 0 && index < files.Length ? Path.GetFileName(files[index]) : string.Empty;
+    }
+
+    private static string[] GetSortedFilesOrEmpty(string folder)
+    {
+        if (!Directory.Exists(folder))
+            return [];
+
+        string[] files = Directory.GetFiles(folder);
+        Array.Sort(files, StringComparer.OrdinalIgnoreCase);
+        return files;
+    }
+
+    private static string Csv(params object[] values)
+    {
+        return string.Join(",", values.Select(v =>
+        {
+            string value = Convert.ToString(v, CultureInfo.InvariantCulture) ?? string.Empty;
+            return "\"" + value.Replace("\"", "\"\"") + "\"";
+        }));
+    }
+
+    private void B_SeedCurrentCityEncounters_Click(object sender, EventArgs e)
+    {
+        if (CB_LocationID.SelectedIndex < 0)
+            return;
+
+        SetEntry();
+        bool changed = SeedEncounterData(CB_LocationID.SelectedIndex, ignoreCityCheck: true, CHK_SeedOverwriteEncounters.Checked, out string status);
+        if (changed)
+            GetEntry();
+
+        WinFormsUtil.Alert(status);
+    }
+
+    private void B_SeedAllCityEncounters_Click(object sender, EventArgs e)
+    {
+        if (WinFormsUtil.Prompt(MessageBoxButtons.YesNo, "Seed all likely city/town maps?",
+            "This only injects the Encounter Data section. It does not place visible grass tiles yet.") != DialogResult.Yes)
+            return;
+
+        SetEntry();
+
+        var report = new List<string> { "Index,Location,Result" };
+        int changed = 0;
+        int skippedExisting = 0;
+        int skippedNotCity = 0;
+        int failed = 0;
+
+        for (int i = 0; i < filepaths.Length; i++)
+        {
+            bool result = SeedEncounterData(i, ignoreCityCheck: false, CHK_SeedOverwriteEncounters.Checked, out string status);
+            report.Add($"{i},\"{GetLocationLabel(i).Replace("\"", "\"\"")}\",\"{status.Replace("\"", "\"\"")}\"");
+
+            if (result)
+            {
+                changed++;
+                continue;
+            }
+
+            if (status.Contains("already has encounters"))
+                skippedExisting++;
+            else if (status.Contains("not a likely outdoor city/town"))
+                skippedNotCity++;
+            else
+                failed++;
+        }
+
+        File.WriteAllLines("city_encounter_seed_report.csv", report);
+        GetEntry();
+
+        WinFormsUtil.Alert(
+            $"City encounter seeding finished.\nChanged: {changed}\nAlready had encounters: {skippedExisting}\nSkipped by city/town filter: {skippedNotCity}\nOther skipped/failed: {failed}",
+            "Report written to city_encounter_seed_report.csv");
+    }
+
+    private bool SeedEncounterData(int index, bool ignoreCityCheck, bool overwrite, out string status)
+    {
+        status = "Unknown result";
+        if (index < 0 || index >= filepaths.Length)
+        {
+            status = "Invalid location index";
+            return false;
+        }
+
+        byte[] raw;
+        try
+        {
+            raw = File.ReadAllBytes(filepaths[index]);
+        }
+        catch (Exception ex)
+        {
+            status = "Could not read file: " + ex.Message;
+            return false;
+        }
+
+        byte[][] data = Mini.UnpackMini(raw, "ZO");
+        if (data == null || data.Length < 4)
+        {
+            status = "Not a valid ZO file";
+            return false;
+        }
+
+        var zd = new ZoneData(data[0]);
+        if (!ignoreCityCheck && !IsLikelyOutdoorCityTown(index, zd))
+        {
+            status = "Skipped: not a likely outdoor city/town";
+            return false;
+        }
+
+        if (!overwrite && HasRealEncounterData(data[3]))
+        {
+            status = "Skipped: already has encounters";
+            return false;
+        }
+
+        data[3] = CreateCityEncounterSeedData();
+
+        try
+        {
+            File.WriteAllBytes(filepaths[index], Mini.PackMini(data, "ZO"));
+            status = "Seeded Grass encounter data";
+            return true;
+        }
+        catch (Exception ex)
+        {
+            status = "Could not write file: " + ex.Message;
+            return false;
+        }
+    }
+
+    private bool IsLikelyOutdoorCityTown(int index, ZoneData zd)
+    {
+        if (zd?.Data == null)
+            return false;
+
+        string locationName = GetLocationLabel(index);
+        if (!IsLikelyCityTownName(locationName))
+            return false;
+
+        // The parent-map name alone can also appear on interiors. Require a stronger outdoor movement flag.
+        return zd.IsFlyEnable || zd.IsBicycleEnable || zd.IsRollerSkateEnable;
+    }
+
+    private string GetLocationLabel(int index)
+    {
+        if (index >= 0 && index < rawLocations.Length && !string.IsNullOrWhiteSpace(rawLocations[index]))
+            return rawLocations[index];
+        if (index >= 0 && index < zdLocations.Length && !string.IsNullOrWhiteSpace(zdLocations[index]))
+            return zdLocations[index];
+        return index.ToString(CultureInfo.InvariantCulture);
+    }
+
+    private static bool IsLikelyCityTownName(string locationName)
+    {
+        if (string.IsNullOrWhiteSpace(locationName))
+            return false;
+
+        string n = locationName.ToUpperInvariant();
+        string[] includes =
+        [
+            "CITY", "TOWN", "VILLAGE",
+            "VANIVILLE", "AQUACORDE", "SANTALUNE", "LUMIOSE", "CAMPRIER", "CYLLAGE", "AMBRETTE",
+            "GEOSENGE", "SHALOUR", "COUMARINE", "LAVERRE", "DENDENMILLE", "ANISTAR", "COURIWAY", "SNOWBELLE", "KILOUDE",
+            "LITTLEROOT", "OLDALE", "DEWFORD", "LAVARIDGE", "FALLARBOR", "VERDANTURF", "PACIFIDLOG", "BATTLE RESORT",
+        ];
+        string[] excludes =
+        [
+            "ROUTE", "CAVE", "FOREST", "WOODS", "PATH", "ROAD", "GYM", "CENTER", "SHOP", "MART", "HOUSE", "ROOM",
+            "HOTEL", "MUSEUM", "LAB", "SCHOOL", "AQUARIUM", "STATION", "TOWER", "LEAGUE", "CHAMBER", "BASE", "HALL",
+            "MOUNTAIN", "SEA", "BAY", "ISLAND", "DESERT", "MARSH", "SWAMP",
+        ];
+
+        return includes.Any(n.Contains) && !excludes.Any(n.Contains);
+    }
+
+    private static bool HasRealEncounterData(byte[] data)
+    {
+        if (data == null || data.Length <= 0x10)
+            return false;
+
+        for (int i = 0x10; i + 3 < data.Length; i += 4)
+        {
+            int species = BitConverter.ToUInt16(data, i) & 0x7FF;
+            if (species != 0)
+                return true;
+        }
+        return false;
+    }
+
+    private static byte[] CreateCityEncounterSeedData()
+    {
+        int tableLength = Main.Config.ORAS ? 0x102 : 0x178;
+        byte[] data = new byte[0x10 + tableLength];
+        data[0] = 0x01; // Grass encounter header.
+
+        int grassSlots = 12;
+        for (int i = 0; i < grassSlots; i++)
+            WriteEncounterSlot(data, 0x10 + (i * 4), species: 1, form: 0, min: 5, max: 7);
+
+        int fullSlots = tableLength / 4;
+        for (int i = grassSlots; i < fullSlots; i++)
+            WriteEncounterSlot(data, 0x10 + (i * 4), species: 0, form: 0, min: 1, max: 1);
+
+        return data;
+    }
+
+    private static void WriteEncounterSlot(byte[] data, int offset, int species, int form, int min, int max)
+    {
+        ushort speciesForm = (ushort)((form << 11) | (species & 0x7FF));
+        BitConverter.GetBytes(speciesForm).CopyTo(data, offset);
+        data[offset + 2] = (byte)min;
+        data[offset + 3] = (byte)max;
     }
 
     private void GetScriptData()

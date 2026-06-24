@@ -74,6 +74,7 @@ sealed partial class Main
         this.B_Evolution = new System.Windows.Forms.Button();
         this.B_LevelUp = new System.Windows.Forms.Button();
         this.B_Wild = new System.Windows.Forms.Button();
+        this.B_CatchZones = new System.Windows.Forms.Button();
         this.B_MegaEvo = new System.Windows.Forms.Button();
         this.B_EggMove = new System.Windows.Forms.Button();
         this.B_Trainer = new System.Windows.Forms.Button();
@@ -484,6 +485,7 @@ sealed partial class Main
         this.FLP_RomFS.Controls.Add(this.B_Evolution);
         this.FLP_RomFS.Controls.Add(this.B_LevelUp);
         this.FLP_RomFS.Controls.Add(this.B_Wild);
+        this.FLP_RomFS.Controls.Add(this.B_CatchZones);
         this.FLP_RomFS.Controls.Add(this.B_MegaEvo);
         this.FLP_RomFS.Controls.Add(this.B_EggMove);
         this.FLP_RomFS.Controls.Add(this.B_Trainer);
@@ -558,6 +560,16 @@ sealed partial class Main
         this.B_Wild.Text = "Wild Encounters";
         this.B_Wild.UseVisualStyleBackColor = true;
         this.B_Wild.Click += new System.EventHandler(this.B_Wild_Click);
+        // 
+        // B_CatchZones
+        // 
+        this.B_CatchZones.Location = new System.Drawing.Point(3, 61);
+        this.B_CatchZones.Name = "B_CatchZones";
+        this.B_CatchZones.Size = new System.Drawing.Size(100, 23);
+        this.B_CatchZones.TabIndex = 15;
+        this.B_CatchZones.Text = "Enable Catch Zones";
+        this.B_CatchZones.UseVisualStyleBackColor = true;
+        this.B_CatchZones.Click += new System.EventHandler(this.B_CatchZones_Click);
         // 
         // B_MegaEvo
         // 
@@ -869,6 +881,7 @@ sealed partial class Main
     private System.Windows.Forms.Button B_EggMove;
     private System.Windows.Forms.Button B_MegaEvo;
     private System.Windows.Forms.Button B_Wild;
+    private System.Windows.Forms.Button B_CatchZones;
     private System.Windows.Forms.Button B_StoryText;
     private System.Windows.Forms.Button B_LevelUp;
     private System.Windows.Forms.Button B_Evolution;
