@@ -18,6 +18,21 @@ build/
 bld/
 [Bb]in/
 [Oo]bj/
+@(
+"publish/",
+"release_v4.1/",
+"catch_zone_templates/",
+"mapGR/",
+"encdata/",
+"mapMatrix/",
+"MapImages/",
+"*_g/",
+"*.3ds",
+"*.cia",
+"*.cxi",
+"*.cci",
+"*.pdb"
+) | Add-Content .gitignore
 
 # Roslyn cache directories
 *.ide/
