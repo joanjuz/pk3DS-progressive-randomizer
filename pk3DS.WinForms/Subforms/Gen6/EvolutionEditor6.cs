@@ -157,7 +157,7 @@ public partial class EvolutionEditor6 : Form
         if (DialogResult.Yes != WinFormsUtil.Prompt(
             MessageBoxButtons.YesNo,
             "Normalize evolutions?",
-            "This will add the custom evolution methods without deleting original methods."))
+            "This will apply evolution changes from custom_balance_templates. If the template is missing, an example file will be created and the built-in defaults will be used."))
         {
             return;
         }
@@ -174,7 +174,7 @@ public partial class EvolutionEditor6 : Form
     }
     private int ApplyNormalizedEvolutions()
     {
-        var patches = GetNormalizedEvolutionPatches();
+        var patches = GetNormalizedEvolutionPatchesFromTemplate();
 
         int changed = 0;
 
@@ -242,6 +242,46 @@ public partial class EvolutionEditor6 : Form
         }
 
         return -1;
+    }
+
+    private EvolutionPatch[] GetNormalizedEvolutionPatchesFromTemplate()
+    {
+        CustomBalanceTemplates.WriteExampleTemplatesIfMissing();
+
+        var templatePatches = CustomBalanceTemplates.LoadEvolutionPatches(6, specieslist);
+        if (templatePatches.Length == 0)
+            return GetNormalizedEvolutionPatches();
+
+        return templatePatches.Select(ConvertEvolutionPatchRow).ToArray();
+    }
+
+    private static EvolutionPatch ConvertEvolutionPatchRow(CustomBalanceTemplates.EvolutionPatchRow row)
+    {
+        int method = ResolveEvolutionMethod(row.Method);
+        int argument = row.Argument;
+
+        if ((method == EvoLevelUp || method == EvoLevelUpMale || method == EvoLevelUpFemale) && argument == 0)
+            argument = row.Level;
+
+        return new EvolutionPatch(row.Source, row.Target, method, argument, row.ItemName, row.AltItemName);
+    }
+
+    private static int ResolveEvolutionMethod(string value)
+    {
+        value = (value ?? string.Empty).Trim();
+
+        if (int.TryParse(value, out int method))
+            return method;
+
+        return value.ToLowerInvariant() switch
+        {
+            "level" or "levelup" or "l" => EvoLevelUp,
+            "friendship" or "friend" or "f" => EvoFriendship,
+            "malelevel" or "levelmale" or "male" or "m" => EvoLevelUpMale,
+            "femalelevel" or "levelfemale" or "female" or "h" => EvoLevelUpFemale,
+            "useditem" or "item" or "stone" or "u" => EvoUsedItem,
+            _ => EvoLevelUp,
+        };
     }
 
     private static bool AddOrUpdateEvolution(EvolutionSet6 set, EvolutionPatch patch)

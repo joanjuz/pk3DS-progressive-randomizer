@@ -1,0 +1,985 @@
+diff --git a/custom_balance_templates/evolutions_gen6.csv b/custom_balance_templates/evolutions_gen6.csv
+new file mode 100644
+index 0000000..1337831
+--- /dev/null
++++ b/custom_balance_templates/evolutions_gen6.csv
+@@ -0,0 +1,206 @@
++Source,Target,Method,Level,Argument,Form,ItemName,AltItemName
++"# Source/Target can be species IDs or exact names. Methods: Level, Friendship, MaleLevel, FemaleLevel, UsedItem, or numeric method ID.",,,,,,,
++25,26,Level,30,,-1,,
++30,31,Level,30,,-1,,
++33,34,Level,30,,-1,,
++35,36,Level,30,,-1,,
++37,38,Level,30,,-1,,
++39,40,Level,30,,-1,,
++44,45,Level,30,,-1,,
++44,182,Friendship,,,-1,,
++46,47,Level,15,,-1,,
++48,49,Level,24,,-1,,
++54,55,Level,24,,-1,,
++58,59,Level,36,,-1,,
++61,62,Friendship,,,-1,,
++61,186,Level,34,,-1,,
++64,65,Level,36,,-1,,
++66,67,Level,24,,-1,,
++67,68,Level,36,,-1,,
++70,71,Level,30,,-1,,
++74,75,Level,22,,-1,,
++75,76,Level,36,,-1,,
++77,78,Level,24,,-1,,
++79,80,Level,30,,-1,,
++79,199,Friendship,,,-1,,
++81,82,Level,24,,-1,,
++82,462,Level,36,,-1,,
++84,85,Level,24,,-1,,
++86,87,Level,26,,-1,,
++88,89,Level,30,,-1,,
++90,91,Level,30,,-1,,
++93,94,Level,36,,-1,,
++95,208,Level,34,,-1,,
++102,103,Level,30,,-1,,
++108,463,Level,30,,-1,,
++109,110,Level,28,,-1,,
++111,112,Level,28,,-1,,
++112,464,Level,36,,-1,,
++440,113,Level,26,,-1,,
++113,242,Level,36,,-1,,
++114,465,Level,36,,-1,,
++116,117,Level,24,,-1,,
++117,230,Level,36,,-1,,
++118,119,Level,24,,-1,,
++120,121,Level,30,,-1,,
++123,212,Level,34,,-1,,
++238,124,Level,24,,-1,,
++239,125,Level,26,,-1,,
++239,125,Friendship,,,-1,,
++125,466,Level,36,,-1,,
++240,126,Level,26,,-1,,
++240,126,Friendship,,,-1,,
++126,467,Level,36,,-1,,
++137,233,Level,34,,-1,,
++233,474,Level,36,,-1,,
++138,139,Level,30,,-1,,
++140,141,Level,30,,-1,,
++147,148,Level,24,,-1,,
++148,149,Level,45,,-1,,
++170,171,Level,24,,-1,,
++176,468,Level,36,,-1,,
++190,424,Level,30,,-1,,
++191,192,Level,20,,-1,,
++193,469,Level,30,,-1,,
++198,430,Level,30,,-1,,
++200,429,Level,30,,-1,,
++204,205,Level,20,,-1,,
++207,472,Level,36,,-1,,
++215,461,Level,34,,-1,,
++218,219,Level,25,,-1,,
++220,221,Level,25,,-1,,
++221,473,Level,36,,-1,,
++246,247,Level,24,,-1,,
++247,248,Level,45,,-1,,
++271,272,Level,30,,-1,,
++274,275,Level,30,,-1,,
++281,475,Friendship,,,-1,,
++287,288,Level,24,,-1,,
++288,289,Level,45,,-1,,
++294,295,Level,32,,-1,,
++299,476,Level,36,,-1,,
++300,301,Level,30,,-1,,
++304,305,Level,26,,-1,,
++307,308,Level,28,,-1,,
++315,407,Level,30,,-1,,
++318,319,Level,26,,-1,,
++320,321,Level,28,,-1,,
++322,323,Level,26,,-1,,
++325,326,Level,24,,-1,,
++328,329,Level,22,,-1,,
++329,330,Level,36,,-1,,
++331,332,Level,26,,-1,,
++333,334,Level,26,,-1,,
++343,344,Level,28,,-1,,
++345,346,Level,30,,-1,,
++347,348,Level,30,,-1,,
++349,350,Level,36,,-1,,
++353,354,Level,26,,-1,,
++355,356,Level,32,,-1,,
++356,477,Level,36,,-1,,
++360,202,Level,24,,-1,,
++361,362,MaleLevel,30,,-1,,
++361,478,FemaleLevel,30,,-1,,
++363,364,Level,26,,-1,,
++364,365,Level,36,,-1,,
++366,367,MaleLevel,28,,-1,,
++366,368,FemaleLevel,28,,-1,,
++370,594,Friendship,,,-1,,
++371,372,Level,24,,-1,,
++372,373,Level,45,,-1,,
++374,375,Level,24,,-1,,
++375,376,Level,45,,-1,,
++406,315,Level,15,,-1,,
++406,315,Friendship,,,-1,,
++408,409,Level,30,,-1,,
++410,411,Level,30,,-1,,
++415,416,Level,21,,-1,,
++431,432,Level,21,,-1,,
++433,358,Level,24,,-1,,
++433,358,Friendship,,,-1,,
++434,435,Level,26,,-1,,
++436,437,Level,26,,-1,,
++438,185,Level,20,,-1,,
++438,185,Friendship,,,-1,,
++439,122,Level,24,,-1,,
++439,122,Friendship,,,-1,,
++443,444,Level,24,,-1,,
++444,445,Level,45,,-1,,
++446,143,Level,35,,-1,,
++447,448,Level,32,,-1,,
++451,452,Level,30,,-1,,
++453,454,Level,26,,-1,,
++458,226,Level,24,,-1,,
++456,457,Level,26,,-1,,
++459,460,Level,30,,-1,,
++511,512,Level,30,,-1,,
++513,514,Level,30,,-1,,
++515,516,Level,30,,-1,,
++517,518,Level,30,,-1,,
++532,533,Level,24,,-1,,
++533,534,Level,36,,-1,,
++546,547,Level,30,,-1,,
++548,549,Level,30,,-1,,
++551,552,Level,20,,-1,,
++552,553,Level,32,,-1,,
++557,558,Level,28,,-1,,
++559,560,Level,30,,-1,,
++564,565,Level,30,,-1,,
++566,567,Level,37,,-1,,
++568,569,Level,30,,-1,,
++572,573,Level,30,,-1,,
++574,575,Level,24,,-1,,
++575,576,Level,36,,-1,,
++577,578,Level,26,,-1,,
++578,579,Level,36,,-1,,
++580,581,Level,24,,-1,,
++582,583,Level,24,,-1,,
++583,584,Level,36,,-1,,
++585,586,Level,24,,-1,,
++588,589,Level,30,,-1,,
++592,593,Level,30,,-1,,
++599,600,Level,24,,-1,,
++600,601,Level,36,,-1,,
++602,603,Level,24,,-1,,
++603,604,Level,36,,-1,,
++605,606,Level,30,,-1,,
++607,608,Level,24,,-1,,
++608,609,Level,36,,-1,,
++610,611,Level,28,,-1,,
++611,612,Level,38,,-1,,
++613,614,Level,30,,-1,,
++616,617,Level,30,,-1,,
++619,620,Level,32,,-1,,
++622,623,Level,28,,-1,,
++624,625,Level,36,,-1,,
++627,628,Level,36,,-1,,
++629,630,Level,36,,-1,,
++633,634,Level,24,,-1,,
++634,635,Level,45,,-1,,
++636,637,Level,38,,-1,,
++667,668,Level,28,,-1,,
++670,671,Level,30,,-1,,
++674,675,Level,32,,-1,,
++680,681,Level,30,,-1,,
++682,683,Friendship,,,-1,,
++684,685,Friendship,,,-1,,
++686,687,Level,30,,-1,,
++688,689,Level,28,,-1,,
++690,691,Level,36,,-1,,
++692,693,Level,28,,-1,,
++694,695,Level,30,,-1,,
++696,697,Level,30,,-1,,
++698,699,Level,30,,-1,,
++704,705,Level,24,,-1,,
++705,706,Level,45,,-1,,
++708,709,Level,30,,-1,,
++710,711,Level,30,,-1,,
++714,715,Level,36,,-1,,
++737,738,Level,36,,-1,,
++739,740,Level,30,,-1,,
++753,754,Level,30,,-1,,
++757,758,Level,28,,-1,,
++762,763,Level,34,,-1,,
++769,770,Level,30,,-1,,
++782,783,Level,24,,-1,,
++783,784,Level,45,,-1,,
+diff --git a/custom_balance_templates/evolutions_gen7.csv b/custom_balance_templates/evolutions_gen7.csv
+new file mode 100644
+index 0000000..0d59a33
+--- /dev/null
++++ b/custom_balance_templates/evolutions_gen7.csv
+@@ -0,0 +1,208 @@
++Source,Target,Method,Level,Argument,Form,ItemName,AltItemName
++"# Source/Target can be species IDs or exact names. Methods: Level, Friendship, MaleLevel, FemaleLevel, UsedItem, or numeric method ID.",,,,,,,
++25,26,Level,30,,-1,,
++30,31,Level,30,,-1,,
++33,34,Level,30,,-1,,
++35,36,Level,30,,-1,,
++37,38,Level,30,,-1,,
++39,40,Level,30,,-1,,
++44,45,Level,30,,-1,,
++44,182,Friendship,,,-1,,
++46,47,Level,15,,-1,,
++48,49,Level,24,,-1,,
++54,55,Level,24,,-1,,
++58,59,Level,36,,-1,,
++61,62,Friendship,,,-1,,
++61,186,Level,34,,-1,,
++64,65,Level,36,,-1,,
++66,67,Level,24,,-1,,
++67,68,Level,36,,-1,,
++70,71,Level,30,,-1,,
++74,75,Level,22,,-1,,
++75,76,Level,36,,-1,,
++77,78,Level,24,,-1,,
++79,80,Level,30,,-1,,
++79,199,Friendship,,,-1,,
++81,82,Level,24,,-1,,
++82,462,Level,36,,-1,,
++84,85,Level,24,,-1,,
++86,87,Level,26,,-1,,
++88,89,Level,30,,-1,,
++90,91,Level,30,,-1,,
++93,94,Level,36,,-1,,
++95,208,Level,34,,-1,,
++102,103,Level,30,,-1,,
++108,463,Level,30,,-1,,
++109,110,Level,28,,-1,,
++111,112,Level,28,,-1,,
++112,464,Level,36,,-1,,
++440,113,Level,26,,-1,,
++113,242,Level,36,,-1,,
++114,465,Level,36,,-1,,
++116,117,Level,24,,-1,,
++117,230,Level,36,,-1,,
++118,119,Level,24,,-1,,
++120,121,Level,30,,-1,,
++123,212,Level,34,,-1,,
++238,124,Level,24,,-1,,
++239,125,Level,26,,-1,,
++239,125,Friendship,,,-1,,
++125,466,Level,36,,-1,,
++240,126,Level,26,,-1,,
++240,126,Friendship,,,-1,,
++126,467,Level,36,,-1,,
++137,233,Level,34,,-1,,
++233,474,Level,36,,-1,,
++138,139,Level,30,,-1,,
++140,141,Level,30,,-1,,
++147,148,Level,24,,-1,,
++148,149,Level,45,,-1,,
++170,171,Level,24,,-1,,
++176,468,Level,36,,-1,,
++190,424,Level,30,,-1,,
++191,192,Level,20,,-1,,
++193,469,Level,30,,-1,,
++198,430,Level,30,,-1,,
++200,429,Level,30,,-1,,
++204,205,Level,20,,-1,,
++207,472,Level,36,,-1,,
++215,461,Level,34,,-1,,
++218,219,Level,25,,-1,,
++220,221,Level,25,,-1,,
++221,473,Level,36,,-1,,
++246,247,Level,24,,-1,,
++247,248,Level,45,,-1,,
++271,272,Level,30,,-1,,
++274,275,Level,30,,-1,,
++281,475,Friendship,,,-1,,
++287,288,Level,24,,-1,,
++288,289,Level,45,,-1,,
++294,295,Level,32,,-1,,
++299,476,Level,36,,-1,,
++300,301,Level,30,,-1,,
++304,305,Level,26,,-1,,
++307,308,Level,28,,-1,,
++315,407,Level,30,,-1,,
++318,319,Level,26,,-1,,
++320,321,Level,28,,-1,,
++322,323,Level,26,,-1,,
++325,326,Level,24,,-1,,
++328,329,Level,22,,-1,,
++329,330,Level,36,,-1,,
++331,332,Level,26,,-1,,
++333,334,Level,26,,-1,,
++343,344,Level,28,,-1,,
++345,346,Level,30,,-1,,
++347,348,Level,30,,-1,,
++349,350,Level,36,,-1,,
++353,354,Level,26,,-1,,
++355,356,Level,32,,-1,,
++356,477,UsedItem,,,-1,Dusk Stone,Piedra Noche
++360,202,Level,24,,-1,,
++361,362,MaleLevel,30,,-1,,
++361,478,FemaleLevel,30,,-1,,
++363,364,Level,26,,-1,,
++364,365,Level,36,,-1,,
++366,367,MaleLevel,28,,-1,,
++366,368,FemaleLevel,28,,-1,,
++370,594,UsedItem,,,-1,Water Stone,Piedra Agua
++371,372,Level,24,,-1,,
++372,373,Level,45,,-1,,
++374,375,Level,24,,-1,,
++375,376,Level,45,,-1,,
++406,315,Level,15,,-1,,
++406,315,Friendship,,,-1,,
++408,409,Level,30,,-1,,
++410,411,Level,30,,-1,,
++415,416,Level,21,,-1,,
++431,432,Level,21,,-1,,
++433,358,Level,24,,-1,,
++433,358,Friendship,,,-1,,
++434,435,Level,26,,-1,,
++436,437,Level,26,,-1,,
++438,185,Level,20,,-1,,
++438,185,Friendship,,,-1,,
++439,122,Level,24,,-1,,
++439,122,Friendship,,,-1,,
++443,444,Level,24,,-1,,
++444,445,Level,45,,-1,,
++446,143,Level,35,,-1,,
++447,448,Level,32,,-1,,
++451,452,Level,30,,-1,,
++453,454,Level,26,,-1,,
++458,226,Level,24,,-1,,
++456,457,Level,26,,-1,,
++459,460,Level,30,,-1,,
++511,512,Level,30,,-1,,
++513,514,Level,30,,-1,,
++515,516,Level,30,,-1,,
++517,518,Level,30,,-1,,
++532,533,Level,24,,-1,,
++533,534,Level,36,,-1,,
++546,547,Level,30,,-1,,
++548,549,Level,30,,-1,,
++551,552,Level,20,,-1,,
++552,553,Level,32,,-1,,
++557,558,Level,28,,-1,,
++559,560,Level,30,,-1,,
++564,565,Level,30,,-1,,
++566,567,Level,37,,-1,,
++568,569,Level,30,,-1,,
++572,573,Level,30,,-1,,
++574,575,Level,24,,-1,,
++575,576,Level,36,,-1,,
++577,578,Level,26,,-1,,
++578,579,Level,36,,-1,,
++580,581,Level,24,,-1,,
++582,583,Level,24,,-1,,
++583,584,Level,36,,-1,,
++585,586,Level,24,,-1,,
++588,589,Level,30,,-1,,
++592,593,Level,30,,-1,,
++599,600,Level,24,,-1,,
++600,601,Level,36,,-1,,
++602,603,Level,24,,-1,,
++603,604,Level,36,,-1,,
++605,606,Level,30,,-1,,
++607,608,Level,24,,-1,,
++608,609,Level,36,,-1,,
++610,611,Level,28,,-1,,
++611,612,Level,38,,-1,,
++613,614,Level,30,,-1,,
++616,617,Level,30,,-1,,
++619,620,Level,32,,-1,,
++622,623,Level,28,,-1,,
++624,625,Level,36,,-1,,
++627,628,Level,36,,-1,,
++629,630,Level,36,,-1,,
++633,634,Level,24,,-1,,
++634,635,Level,45,,-1,,
++636,637,Level,38,,-1,,
++667,668,Level,28,,-1,,
++670,671,Level,30,,-1,,
++674,675,Level,32,,-1,,
++680,681,Level,30,,-1,,
++682,683,Friendship,,,-1,,
++684,685,Friendship,,,-1,,
++686,687,Level,30,,-1,,
++688,689,Level,28,,-1,,
++690,691,Level,36,,-1,,
++692,693,Level,28,,-1,,
++694,695,Level,30,,-1,,
++696,697,Level,30,,-1,,
++698,699,Level,30,,-1,,
++704,705,Level,24,,-1,,
++705,706,Level,45,,-1,,
++708,709,Level,30,,-1,,
++710,711,Level,30,,-1,,
++714,715,Level,36,,-1,,
++27,28,Level,22,,1,,
++37,38,Level,30,,1,,
++737,738,Level,36,,-1,,
++739,740,Level,30,,-1,,
++753,754,Level,30,,-1,,
++757,758,Level,28,,-1,,
++762,763,Level,34,,-1,,
++769,770,Level,30,,-1,,
++782,783,Level,24,,-1,,
++783,784,Level,45,,-1,,
+diff --git a/custom_balance_templates/moves_gen6.csv b/custom_balance_templates/moves_gen6.csv
+new file mode 100644
+index 0000000..a649c6a
+--- /dev/null
++++ b/custom_balance_templates/moves_gen6.csv
+@@ -0,0 +1,34 @@
++Move,Power,Accuracy,PP,CriticalStage,Heal,Inflict,InflictChance,ClearStatEffects,KingShieldAttackMinusOne
++# You can use move IDs or exact move names. Empty cells mean keep current value.,,,,,,,,,
++15,70,100,15,1,,,,,
++249,60,100,,,,,,,
++19,100,100,,,,,,,
++147,,85,,,,,,,
++137,,90,15,,,,,,
++591,95,95,10,,,,,true,
++613,80,100,,,50,,,,
++448,80,100,15,,,6,15,,
++141,70,100,15,,,,,,
++188,60,100,,,,,,,
++552,70,100,,,,,,,
++594,20,100,,,,,,,
++182,,,7,,,,,,
++197,,,7,,,,,,
++596,,,7,,,,,,
++588,,,7,,,,,,true
++476,,,7,,,,,,
++266,,,7,,,,,,
++502,,,7,,,,,,
++73,,,7,,,,,,
++281,,,7,,,,,,
++270,,,5,,,,,,
++105,,,5,,,,,,
++234,,,5,,,,,,
++236,,,5,,,,,,
++208,,,5,,,,,,
++303,,,5,,,,,,
++235,,,5,,,,,,
++456,,,5,,,,,,
++135,,,5,,,,,,
++355,,,5,,,,,,
++505,,,5,,,,,,
+diff --git a/custom_balance_templates/moves_gen7.csv b/custom_balance_templates/moves_gen7.csv
+new file mode 100644
+index 0000000..a649c6a
+--- /dev/null
++++ b/custom_balance_templates/moves_gen7.csv
+@@ -0,0 +1,34 @@
++Move,Power,Accuracy,PP,CriticalStage,Heal,Inflict,InflictChance,ClearStatEffects,KingShieldAttackMinusOne
++# You can use move IDs or exact move names. Empty cells mean keep current value.,,,,,,,,,
++15,70,100,15,1,,,,,
++249,60,100,,,,,,,
++19,100,100,,,,,,,
++147,,85,,,,,,,
++137,,90,15,,,,,,
++591,95,95,10,,,,,true,
++613,80,100,,,50,,,,
++448,80,100,15,,,6,15,,
++141,70,100,15,,,,,,
++188,60,100,,,,,,,
++552,70,100,,,,,,,
++594,20,100,,,,,,,
++182,,,7,,,,,,
++197,,,7,,,,,,
++596,,,7,,,,,,
++588,,,7,,,,,,true
++476,,,7,,,,,,
++266,,,7,,,,,,
++502,,,7,,,,,,
++73,,,7,,,,,,
++281,,,7,,,,,,
++270,,,5,,,,,,
++105,,,5,,,,,,
++234,,,5,,,,,,
++236,,,5,,,,,,
++208,,,5,,,,,,
++303,,,5,,,,,,
++235,,,5,,,,,,
++456,,,5,,,,,,
++135,,,5,,,,,,
++355,,,5,,,,,,
++505,,,5,,,,,,
+diff --git a/pk3DS.WinForms/Misc/CustomBalanceTemplates.cs b/pk3DS.WinForms/Misc/CustomBalanceTemplates.cs
+new file mode 100644
+index 0000000..8ffc1c6
+--- /dev/null
++++ b/pk3DS.WinForms/Misc/CustomBalanceTemplates.cs
+@@ -0,0 +1,244 @@
++using System;
++using System.Collections.Generic;
++using System.Globalization;
++using System.IO;
++using System.Linq;
++
++namespace pk3DS.WinForms;
++
++internal static class CustomBalanceTemplates
++{
++    internal const string TemplateRoot = "custom_balance_templates";
++
++    internal sealed class MovePatchRow
++    {
++        public int Move { get; init; }
++        public int? Power { get; init; }
++        public int? Accuracy { get; init; }
++        public int? PP { get; init; }
++        public int? CriticalStage { get; init; }
++        public int? Heal { get; init; }
++        public int? Inflict { get; init; }
++        public int? InflictChance { get; init; }
++        public bool ClearStatEffects { get; init; }
++        public bool KingShieldAttackMinusOne { get; init; }
++    }
++
++    internal sealed class EvolutionPatchRow
++    {
++        public int Source { get; init; }
++        public int Target { get; init; }
++        public string Method { get; init; } = string.Empty;
++        public int Level { get; init; }
++        public int Argument { get; init; }
++        public sbyte Form { get; init; } = -1;
++        public string ItemName { get; init; } = string.Empty;
++        public string AltItemName { get; init; } = string.Empty;
++    }
++
++    internal static string GetMoveTemplatePath(int generation)
++        => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, TemplateRoot, $"moves_gen{generation}.csv");
++
++    internal static string GetEvolutionTemplatePath(int generation)
++        => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, TemplateRoot, $"evolutions_gen{generation}.csv");
++
++    internal static MovePatchRow[] LoadMovePatches(int generation, string[] moveNames)
++    {
++        string path = GetMoveTemplatePath(generation);
++        if (!File.Exists(path))
++            return [];
++
++        var rows = new List<MovePatchRow>();
++
++        foreach (var fields in ReadCsv(path))
++        {
++            if (fields.Length == 0)
++                continue;
++
++            string first = Get(fields, 0);
++            if (first.Length == 0 || first.StartsWith('#'))
++                continue;
++
++            if (IsHeader(first, "Move"))
++                continue;
++
++            int move = ResolveId(first, moveNames);
++            if (move <= 0)
++                continue;
++
++            rows.Add(new MovePatchRow
++            {
++                Move = move,
++                Power = ParseNullableInt(Get(fields, 1)),
++                Accuracy = ParseNullableInt(Get(fields, 2)),
++                PP = ParseNullableInt(Get(fields, 3)),
++                CriticalStage = ParseNullableInt(Get(fields, 4)),
++                Heal = ParseNullableInt(Get(fields, 5)),
++                Inflict = ParseNullableInt(Get(fields, 6)),
++                InflictChance = ParseNullableInt(Get(fields, 7)),
++                ClearStatEffects = ParseBool(Get(fields, 8)),
++                KingShieldAttackMinusOne = ParseBool(Get(fields, 9)),
++            });
++        }
++
++        return [.. rows];
++    }
++
++    internal static EvolutionPatchRow[] LoadEvolutionPatches(int generation, string[] speciesNames)
++    {
++        string path = GetEvolutionTemplatePath(generation);
++        if (!File.Exists(path))
++            return [];
++
++        var rows = new List<EvolutionPatchRow>();
++
++        foreach (var fields in ReadCsv(path))
++        {
++            if (fields.Length == 0)
++                continue;
++
++            string first = Get(fields, 0);
++            if (first.Length == 0 || first.StartsWith('#'))
++                continue;
++
++            if (IsHeader(first, "Source"))
++                continue;
++
++            int source = ResolveId(first, speciesNames);
++            int target = ResolveId(Get(fields, 1), speciesNames);
++            if (source <= 0 || target <= 0)
++                continue;
++
++            rows.Add(new EvolutionPatchRow
++            {
++                Source = source,
++                Target = target,
++                Method = Get(fields, 2),
++                Level = ParseInt(Get(fields, 3)),
++                Argument = ParseInt(Get(fields, 4)),
++                Form = (sbyte)ParseInt(Get(fields, 5), -1),
++                ItemName = Get(fields, 6),
++                AltItemName = Get(fields, 7),
++            });
++        }
++
++        return [.. rows];
++    }
++
++    internal static void WriteExampleTemplatesIfMissing()
++    {
++        string root = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, TemplateRoot);
++        Directory.CreateDirectory(root);
++
++        WriteIfMissing(Path.Combine(root, "moves_gen6.csv"), ExampleMoves());
++        WriteIfMissing(Path.Combine(root, "moves_gen7.csv"), ExampleMoves());
++        WriteIfMissing(Path.Combine(root, "evolutions_gen6.csv"), ExampleEvolutions());
++        WriteIfMissing(Path.Combine(root, "evolutions_gen7.csv"), ExampleEvolutions());
++    }
++
++    private static string ExampleMoves() =>
++        "Move,Power,Accuracy,PP,CriticalStage,Heal,Inflict,InflictChance,ClearStatEffects,KingShieldAttackMinusOne" + Environment.NewLine +
++        "# You can use move IDs or exact move names. Empty cells mean keep current value." + Environment.NewLine +
++        "15,70,100,15,1,,,,," + Environment.NewLine +
++        "249,60,100,,,,,,," + Environment.NewLine +
++        "588,,,7,,,,,false,true" + Environment.NewLine;
++
++    private static string ExampleEvolutions() =>
++        "Source,Target,Method,Level,Argument,Form,ItemName,AltItemName" + Environment.NewLine +
++        "# Methods: Level, Friendship, MaleLevel, FemaleLevel, UsedItem, or a numeric method ID." + Environment.NewLine +
++        "25,26,Level,30,,, ," + Environment.NewLine +
++        "44,182,Friendship,,,,," + Environment.NewLine +
++        "356,477,UsedItem,,,,Reaper Cloth,Tela Terrible" + Environment.NewLine;
++
++    private static void WriteIfMissing(string path, string text)
++    {
++        if (File.Exists(path))
++            return;
++
++        File.WriteAllText(path, text);
++    }
++
++    private static IEnumerable<string[]> ReadCsv(string path)
++    {
++        foreach (string line in File.ReadLines(path))
++        {
++            string trimmed = line.Trim();
++            if (trimmed.Length == 0)
++                continue;
++
++            yield return SplitCsvLine(line);
++        }
++    }
++
++    private static string[] SplitCsvLine(string line)
++    {
++        var result = new List<string>();
++        var current = new System.Text.StringBuilder();
++        bool quote = false;
++
++        for (int i = 0; i < line.Length; i++)
++        {
++            char c = line[i];
++            if (c == '"')
++            {
++                if (quote && i + 1 < line.Length && line[i + 1] == '"')
++                {
++                    current.Append('"');
++                    i++;
++                }
++                else
++                {
++                    quote = !quote;
++                }
++                continue;
++            }
++
++            if (c == ',' && !quote)
++            {
++                result.Add(current.ToString().Trim());
++                current.Clear();
++                continue;
++            }
++
++            current.Append(c);
++        }
++
++        result.Add(current.ToString().Trim());
++        return [.. result];
++    }
++
++    private static string Get(string[] fields, int index)
++        => index < fields.Length ? fields[index].Trim() : string.Empty;
++
++    private static bool IsHeader(string value, string header)
++        => string.Equals(value, header, StringComparison.OrdinalIgnoreCase);
++
++    private static int ResolveId(string value, string[] names)
++    {
++        value = value.Trim();
++        if (value.Length == 0)
++            return -1;
++
++        if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int id))
++            return id;
++
++        return Array.FindIndex(names, z => string.Equals(z, value, StringComparison.OrdinalIgnoreCase));
++    }
++
++    private static int ParseInt(string value, int fallback = 0)
++        => int.TryParse(value.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int result) ? result : fallback;
++
++    private static int? ParseNullableInt(string value)
++        => int.TryParse(value.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int result) ? result : null;
++
++    private static bool ParseBool(string value)
++    {
++        value = value.Trim();
++        return value.Equals("1", StringComparison.OrdinalIgnoreCase)
++            || value.Equals("true", StringComparison.OrdinalIgnoreCase)
++            || value.Equals("yes", StringComparison.OrdinalIgnoreCase)
++            || value.Equals("y", StringComparison.OrdinalIgnoreCase)
++            || value.Equals("si", StringComparison.OrdinalIgnoreCase)
++            || value.Equals("sí", StringComparison.OrdinalIgnoreCase);
++    }
++}
+diff --git a/pk3DS.WinForms/Subforms/Gen6/EvolutionEditor6.cs b/pk3DS.WinForms/Subforms/Gen6/EvolutionEditor6.cs
+index 243c555..6841884 100644
+--- a/pk3DS.WinForms/Subforms/Gen6/EvolutionEditor6.cs
++++ b/pk3DS.WinForms/Subforms/Gen6/EvolutionEditor6.cs
+@@ -157,7 +157,7 @@ private void B_NormalizeEvolutions_Click(object sender, EventArgs e)
+         if (DialogResult.Yes != WinFormsUtil.Prompt(
+             MessageBoxButtons.YesNo,
+             "Normalize evolutions?",
+-            "This will add the custom evolution methods without deleting original methods."))
++            "This will apply evolution changes from custom_balance_templates. If the template is missing, an example file will be created and the built-in defaults will be used."))
+         {
+             return;
+         }
+@@ -174,7 +174,7 @@ private void B_NormalizeEvolutions_Click(object sender, EventArgs e)
+     }
+     private int ApplyNormalizedEvolutions()
+     {
+-        var patches = GetNormalizedEvolutionPatches();
++        var patches = GetNormalizedEvolutionPatchesFromTemplate();
+ 
+         int changed = 0;
+ 
+@@ -244,6 +244,46 @@ private int GetItemID(string englishName, string spanishName = "")
+         return -1;
+     }
+ 
++    private EvolutionPatch[] GetNormalizedEvolutionPatchesFromTemplate()
++    {
++        CustomBalanceTemplates.WriteExampleTemplatesIfMissing();
++
++        var templatePatches = CustomBalanceTemplates.LoadEvolutionPatches(6, specieslist);
++        if (templatePatches.Length == 0)
++            return GetNormalizedEvolutionPatches();
++
++        return templatePatches.Select(ConvertEvolutionPatchRow).ToArray();
++    }
++
++    private static EvolutionPatch ConvertEvolutionPatchRow(CustomBalanceTemplates.EvolutionPatchRow row)
++    {
++        int method = ResolveEvolutionMethod(row.Method);
++        int argument = row.Argument;
++
++        if ((method == EvoLevelUp || method == EvoLevelUpMale || method == EvoLevelUpFemale) && argument == 0)
++            argument = row.Level;
++
++        return new EvolutionPatch(row.Source, row.Target, method, argument, row.ItemName, row.AltItemName);
++    }
++
++    private static int ResolveEvolutionMethod(string value)
++    {
++        value = (value ?? string.Empty).Trim();
++
++        if (int.TryParse(value, out int method))
++            return method;
++
++        return value.ToLowerInvariant() switch
++        {
++            "level" or "levelup" or "l" => EvoLevelUp,
++            "friendship" or "friend" or "f" => EvoFriendship,
++            "malelevel" or "levelmale" or "male" or "m" => EvoLevelUpMale,
++            "femalelevel" or "levelfemale" or "female" or "h" => EvoLevelUpFemale,
++            "useditem" or "item" or "stone" or "u" => EvoUsedItem,
++            _ => EvoLevelUp,
++        };
++    }
++
+     private static bool AddOrUpdateEvolution(EvolutionSet6 set, EvolutionPatch patch)
+     {
+         for (int i = 0; i < set.PossibleEvolutions.Length; i++)
+diff --git a/pk3DS.WinForms/Subforms/Gen6/MoveEditor6.cs b/pk3DS.WinForms/Subforms/Gen6/MoveEditor6.cs
+index e2d0969..6a92491 100644
+--- a/pk3DS.WinForms/Subforms/Gen6/MoveEditor6.cs
++++ b/pk3DS.WinForms/Subforms/Gen6/MoveEditor6.cs
+@@ -59,7 +59,7 @@ private void B_BalanceMoves_Click(object sender, EventArgs e)
+         if (DialogResult.Yes != WinFormsUtil.Prompt(
+             MessageBoxButtons.YesNo,
+             "Balance moves?",
+-            "This will apply the custom move changes. Cannot undo."))
++            "This will apply move changes from custom_balance_templates. If the template is missing, an example file will be created and the built-in defaults will be used."))
+         {
+             return;
+         }
+@@ -107,11 +107,33 @@ private void FixMoveEditor6Layout()
+ 
+         CLB_Flags.Height = newHeight;
+     }
++    private MoveBalancePatch[] GetBalancedMovePatchesFromTemplate()
++    {
++        CustomBalanceTemplates.WriteExampleTemplatesIfMissing();
++
++        var templatePatches = CustomBalanceTemplates.LoadMovePatches(6, movelist);
++        if (templatePatches.Length == 0)
++            return GetBalancedMovePatches();
++
++        return templatePatches.Select(z => new MoveBalancePatch
++        {
++            Move = z.Move,
++            Power = z.Power,
++            Accuracy = z.Accuracy,
++            PP = z.PP,
++            CriticalStage = z.CriticalStage,
++            Heal = z.Heal,
++            Inflict = z.Inflict,
++            InflictChance = z.InflictChance,
++            ClearStatEffects = z.ClearStatEffects,
++            KingShieldAttackMinusOne = z.KingShieldAttackMinusOne,
++        }).ToArray();
++    }
+     private int ApplyBalancedMoves()
+     {
+         int changed = 0;
+ 
+-        foreach (var patch in GetBalancedMovePatches())
++        foreach (var patch in GetBalancedMovePatchesFromTemplate())
+         {
+             if (patch.Move <= 0 || patch.Move >= files.Length)
+                 continue;
+diff --git a/pk3DS.WinForms/Subforms/Gen7/EvolutionEditor7.cs b/pk3DS.WinForms/Subforms/Gen7/EvolutionEditor7.cs
+index 62f092d..907063e 100644
+--- a/pk3DS.WinForms/Subforms/Gen7/EvolutionEditor7.cs
++++ b/pk3DS.WinForms/Subforms/Gen7/EvolutionEditor7.cs
+@@ -199,6 +199,41 @@ private int GetItemID(string englishName, string spanishName = "")
+         return -1;
+     }
+ 
++    private EvolutionPatch[] GetNormalizedEvolutionPatchesFromTemplate()
++    {
++        CustomBalanceTemplates.WriteExampleTemplatesIfMissing();
++
++        var templatePatches = CustomBalanceTemplates.LoadEvolutionPatches(7, specieslist);
++        if (templatePatches.Length == 0)
++            return GetNormalizedEvolutionPatches();
++
++        return templatePatches.Select(ConvertEvolutionPatchRow).ToArray();
++    }
++
++    private static EvolutionPatch ConvertEvolutionPatchRow(CustomBalanceTemplates.EvolutionPatchRow row)
++    {
++        int method = ResolveEvolutionMethod(row.Method);
++        return new EvolutionPatch(row.Source, row.Target, method, row.Level, row.Argument, row.Form, row.ItemName, row.AltItemName);
++    }
++
++    private static int ResolveEvolutionMethod(string value)
++    {
++        value = (value ?? string.Empty).Trim();
++
++        if (int.TryParse(value, out int method))
++            return method;
++
++        return value.ToLowerInvariant() switch
++        {
++            "level" or "levelup" or "l" => EvoLevelUp,
++            "friendship" or "friend" or "f" => EvoFriendship,
++            "malelevel" or "levelmale" or "male" or "m" => EvoLevelUpMale,
++            "femalelevel" or "levelfemale" or "female" or "h" => EvoLevelUpFemale,
++            "useditem" or "item" or "stone" or "u" => EvoUsedItem,
++            _ => EvoLevelUp,
++        };
++    }
++
+     private static bool AddOrUpdateEvolution(EvolutionSet7 set, EvolutionPatch patch)
+     {
+         // Si ya existe exactamente esta evolución alternativa, la actualiza.
+@@ -278,7 +313,7 @@ private void B_NormalizeEvolutions_Click(object sender, EventArgs e)
+         if (DialogResult.Yes != WinFormsUtil.Prompt(
+             MessageBoxButtons.YesNo,
+             "Normalize evolutions?",
+-            "This will replace the listed Pokémon evolutions with the custom evolution changes from the PDF. Pokémon not listed will not be changed."))
++            "This will apply evolution changes from custom_balance_templates. If the template is missing, an example file will be created and the built-in defaults will be used."))
+         {
+             return;
+         }
+@@ -295,7 +330,7 @@ private void B_NormalizeEvolutions_Click(object sender, EventArgs e)
+     }
+     private int ApplyNormalizedEvolutions()
+     {
+-        var patches = GetNormalizedEvolutionPatches();
++        var patches = GetNormalizedEvolutionPatchesFromTemplate();
+ 
+         int changed = 0;
+ 
+diff --git a/pk3DS.WinForms/Subforms/Gen7/MoveEditor7.cs b/pk3DS.WinForms/Subforms/Gen7/MoveEditor7.cs
+index e8fdc49..82e1b8f 100644
+--- a/pk3DS.WinForms/Subforms/Gen7/MoveEditor7.cs
++++ b/pk3DS.WinForms/Subforms/Gen7/MoveEditor7.cs
+@@ -76,7 +76,7 @@ private void B_BalanceMoves_Click(object sender, EventArgs e)
+         if (DialogResult.Yes != WinFormsUtil.Prompt(
+             MessageBoxButtons.YesNo,
+             "Balance moves?",
+-            "This will apply the custom move changes from the PDF. Cannot undo."))
++            "This will apply move changes from custom_balance_templates. If the template is missing, an example file will be created and the built-in defaults will be used."))
+         {
+             return;
+         }
+@@ -104,11 +104,33 @@ private sealed class MoveBalancePatch
+         public bool ClearStatEffects { get; init; }
+         public bool KingShieldAttackMinusOne { get; init; }
+     }
++    private MoveBalancePatch[] GetBalancedMovePatchesFromTemplate()
++    {
++        CustomBalanceTemplates.WriteExampleTemplatesIfMissing();
++
++        var templatePatches = CustomBalanceTemplates.LoadMovePatches(7, movelist);
++        if (templatePatches.Length == 0)
++            return GetBalancedMovePatches();
++
++        return templatePatches.Select(z => new MoveBalancePatch
++        {
++            Move = z.Move,
++            Power = z.Power,
++            Accuracy = z.Accuracy,
++            PP = z.PP,
++            CriticalStage = z.CriticalStage,
++            Heal = z.Heal,
++            Inflict = z.Inflict,
++            InflictChance = z.InflictChance,
++            ClearStatEffects = z.ClearStatEffects,
++            KingShieldAttackMinusOne = z.KingShieldAttackMinusOne,
++        }).ToArray();
++    }
+     private int ApplyBalancedMoves()
+     {
+         int changed = 0;
+ 
+-        foreach (var patch in GetBalancedMovePatches())
++        foreach (var patch in GetBalancedMovePatchesFromTemplate())
+         {
+             if (patch.Move <= 0 || patch.Move >= files.Length)
+                 continue;

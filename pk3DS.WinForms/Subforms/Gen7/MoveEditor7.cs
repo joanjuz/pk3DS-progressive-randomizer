@@ -76,7 +76,7 @@ public partial class MoveEditor7 : Form
         if (DialogResult.Yes != WinFormsUtil.Prompt(
             MessageBoxButtons.YesNo,
             "Balance moves?",
-            "This will apply the custom move changes from the PDF. Cannot undo."))
+            "This will apply move changes from custom_balance_templates. If the template is missing, an example file will be created and the built-in defaults will be used."))
         {
             return;
         }
@@ -104,11 +104,33 @@ public partial class MoveEditor7 : Form
         public bool ClearStatEffects { get; init; }
         public bool KingShieldAttackMinusOne { get; init; }
     }
+    private MoveBalancePatch[] GetBalancedMovePatchesFromTemplate()
+    {
+        CustomBalanceTemplates.WriteExampleTemplatesIfMissing();
+
+        var templatePatches = CustomBalanceTemplates.LoadMovePatches(7, movelist);
+        if (templatePatches.Length == 0)
+            return GetBalancedMovePatches();
+
+        return templatePatches.Select(z => new MoveBalancePatch
+        {
+            Move = z.Move,
+            Power = z.Power,
+            Accuracy = z.Accuracy,
+            PP = z.PP,
+            CriticalStage = z.CriticalStage,
+            Heal = z.Heal,
+            Inflict = z.Inflict,
+            InflictChance = z.InflictChance,
+            ClearStatEffects = z.ClearStatEffects,
+            KingShieldAttackMinusOne = z.KingShieldAttackMinusOne,
+        }).ToArray();
+    }
     private int ApplyBalancedMoves()
     {
         int changed = 0;
 
-        foreach (var patch in GetBalancedMovePatches())
+        foreach (var patch in GetBalancedMovePatchesFromTemplate())
         {
             if (patch.Move <= 0 || patch.Move >= files.Length)
                 continue;
