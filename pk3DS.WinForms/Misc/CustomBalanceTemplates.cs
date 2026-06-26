@@ -37,10 +37,10 @@ internal static class CustomBalanceTemplates
     }
 
     internal static string GetMoveTemplatePath(int generation)
-        => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, TemplateRoot, $"moves_gen{generation}.csv");
+    => Path.Combine(GetTemplateRoot(), $"moves_gen{generation}.csv");
 
     internal static string GetEvolutionTemplatePath(int generation)
-        => Path.Combine(AppDomain.CurrentDomain.BaseDirectory, TemplateRoot, $"evolutions_gen{generation}.csv");
+        => Path.Combine(GetTemplateRoot(), $"evolutions_gen{generation}.csv");
 
     internal static MovePatchRow[] LoadMovePatches(int generation, string[] moveNames)
     {
@@ -83,7 +83,25 @@ internal static class CustomBalanceTemplates
 
         return [.. rows];
     }
+    private static string GetTemplateRoot()
+    {
+        string baseDir = AppDomain.CurrentDomain.BaseDirectory;
 
+        string[] candidates =
+        [
+            Path.Combine(baseDir, TemplateRoot),
+        Path.Combine(Environment.CurrentDirectory, TemplateRoot),
+        Path.Combine(AppContext.BaseDirectory, TemplateRoot),
+    ];
+
+        foreach (string candidate in candidates)
+        {
+            if (Directory.Exists(candidate))
+                return candidate;
+        }
+
+        return Path.Combine(baseDir, TemplateRoot);
+    }
     internal static EvolutionPatchRow[] LoadEvolutionPatches(int generation, string[] speciesNames)
     {
         string path = GetEvolutionTemplatePath(generation);
@@ -127,9 +145,8 @@ internal static class CustomBalanceTemplates
 
     internal static void WriteExampleTemplatesIfMissing()
     {
-        string root = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, TemplateRoot);
+        string root = GetTemplateRoot(); 
         Directory.CreateDirectory(root);
-
         WriteIfMissing(Path.Combine(root, "moves_gen6.csv"), ExampleMoves());
         WriteIfMissing(Path.Combine(root, "moves_gen7.csv"), ExampleMoves());
         WriteIfMissing(Path.Combine(root, "evolutions_gen6.csv"), ExampleEvolutions());
