@@ -31,6 +31,8 @@ public partial class SMTE : Form
     private Button B_SetManualBST;
     private CheckBox CHK_LevelCaps;
     private Button B_SetLevelCaps;
+    private CheckBox CHK_RandomDoubleBattles;
+    private NumericUpDown NUD_DoubleBattleChance;
 
     private List<ProgressiveBSTRule> ProgressiveBSTRules = GetDefaultProgressiveBSTRules();
     private List<TrainerLevelCapRule> LevelCapRules = [];
@@ -950,6 +952,8 @@ public partial class SMTE : Form
                 TrainerID = rule.TrainerID,
                 OriginalAceLevel = ace,
                 LevelCap = ClampLevel(cap),
+                GuaranteeMega = rule.GuaranteeMega,
+                MinMovePower = ClampMovePower(rule.MinMovePower),
             });
         }
 
@@ -971,9 +975,6 @@ public partial class SMTE : Form
         if (!CHK_LevelCaps.Checked || stages.Count == 0)
             return null;
 
-        if (IsProtectedOpeningBattle(trainerAce))
-            return null;
-
         var exact = stages.FirstOrDefault(s => s.TrainerID == trainerID);
         if (exact is not null)
         {
@@ -991,27 +992,35 @@ public partial class SMTE : Form
         int nextIndex = stages.IndexOf(next);
         TrainerLevelCapStage previous = nextIndex > 0 ? stages[nextIndex - 1] : null;
 
-        int startAce = previous?.OriginalAceLevel ?? 5;
-        int startTarget = previous?.LevelCap ?? startAce;
-        int endAce = next.OriginalAceLevel;
+        // Preserve the game's original trainer curve instead of flattening everyone far below the cap.
+        // If the next important trainer moved by +N levels, regular trainers before it also move by +N.
         int endTarget = ClampLevel(next.LevelCap - PreviousTrainerGap);
+        int deltaToNextCap = endTarget - next.OriginalAceLevel;
+        int target = ClampLevel(trainerAce + deltaToNextCap);
 
-        if (endAce <= startAce)
-            return endTarget;
-
-        double progress = Math.Clamp((trainerAce - startAce) / (double)(endAce - startAce), 0, 1);
-        double curvePower = Math.Clamp((double)RegularTrainerCurvePower, 1.0, 4.0);
-        double curvedProgress = Math.Pow(progress, curvePower);
-        int target = (int)Math.Round(startTarget + ((endTarget - startTarget) * curvedProgress));
+        // Do not let trainers after a previous cap fall below that previous cap when caps were raised.
+        if (previous is not null && trainerAce > previous.OriginalAceLevel)
+            target = Math.Max(target, previous.LevelCap);
 
         return ClampLevel(target);
     }
 
     private bool ShouldGuaranteeMega(int trainerID, int trainerAce, List<TrainerLevelCapStage> stages)
     {
-        return GuaranteeMegaInImportantBattles
-            && !IsProtectedOpeningBattle(trainerAce)
-            && stages.Any(s => s.TrainerID == trainerID);
+        return stages.Any(s => s.TrainerID == trainerID && s.GuaranteeMega);
+    }
+
+    private static int GetTrainerMinimumMovePower(int trainerID, List<TrainerLevelCapStage> stages)
+    {
+        var stage = stages.FirstOrDefault(s => s.TrainerID == trainerID);
+        return stage is null ? 0 : ClampMovePower(stage.MinMovePower);
+    }
+
+    private static int ClampMovePower(int power)
+    {
+        if (power < 0)
+            return 0;
+        return power > 250 ? 250 : power;
     }
 
     private static bool IsProtectedOpeningBattle(int trainerAce) => trainerAce <= 5;
@@ -1034,6 +1043,56 @@ public partial class SMTE : Form
 
         int delta = target - trainerAce;
         return ClampLevel(currentLevel + delta);
+    }
+
+
+    private void ApplyRandomDoubleBattle(TrainerData7 tr, int trainerAce, int[] protectedBattleRoyalIDs)
+    {
+        if (CHK_RandomDoubleBattles is null || !CHK_RandomDoubleBattles.Checked || NUD_DoubleBattleChance.Value <= 0)
+            return;
+
+        if (protectedBattleRoyalIDs.Contains(tr.ID))
+            return;
+
+        // Only convert regular single battles. Do not overwrite existing double/multi/special modes.
+        if ((int)tr.Mode != 0)
+            return;
+
+        if (Util.Random32() % 100 >= NUD_DoubleBattleChance.Value)
+            return;
+
+        EnsureAtLeastTwoPokemon(tr);
+        tr.Mode = (BattleMode)1;
+    }
+
+    private static void EnsureAtLeastTwoPokemon(TrainerData7 tr)
+    {
+        if (tr.NumPokemon >= 2 || tr.Pokemon.Count >= 2)
+        {
+            tr.NumPokemon = Math.Max(tr.NumPokemon, Math.Min(tr.Pokemon.Count, 6));
+            return;
+        }
+
+        if (tr.Pokemon.Count == 0)
+            return;
+
+        var source = tr.Pokemon[0];
+        tr.Pokemon.Add(new TrainerPoke7
+        {
+            Species = source.Species,
+            Form = source.Form,
+            Level = source.Level,
+            Gender = source.Gender,
+            Item = source.Item,
+            Ability = source.Ability,
+            Nature = source.Nature,
+            IVs = source.IVs?.ToArray(),
+            EVs = source.EVs?.ToArray(),
+            Moves = source.Moves?.ToArray(),
+            Shiny = source.Shiny,
+        });
+
+        tr.NumPokemon = 2;
     }
 
     private void B_Randomize_Click(object sender, EventArgs e)
@@ -1154,8 +1213,11 @@ public partial class SMTE : Form
             if (royal.Contains(tr.ID))
                 tr.NumPokemon = 1;
 
+            ApplyRandomDoubleBattle(tr, trainerAce, royal);
+
             int? targetLevel = GetTrainerTargetLevel(tr.ID, trainerAce, levelCapStages, out bool forceExactLevel);
             bool forceMega = ShouldGuaranteeMega(tr.ID, trainerAce, levelCapStages);
+            int minimumMovePower = GetTrainerMinimumMovePower(tr.ID, levelCapStages);
 
             // PKM Properties
             for (int p = 0; p < tr.Pokemon.Count; p++)
@@ -1259,6 +1321,9 @@ public partial class SMTE : Form
                 if (CHK_ForceHighPower.Checked && pk.Level >= NUD_ForceHighPower.Value)
                     pk.Moves = learn.GetHighPoweredMoves(pk.Species, pk.Form, 4);
 
+                if (minimumMovePower > 0 && CB_Moves.SelectedIndex != 3)
+                    pk.Moves = EnsureMinimumMovePower(pk.Moves, pk.Species, minimumMovePower, move);
+
                 // sanitize moves
                 if (CB_Moves.SelectedIndex > 1) // learn source
                 {
@@ -1271,6 +1336,64 @@ public partial class SMTE : Form
         }
         WinFormsUtil.Alert("Randomized all Trainers according to specification!", "Press the Dump to .TXT button to view the new Trainer information!");
     }
+    private static int[] EnsureMinimumMovePower(int[] moves, int species, int minimumPower, MoveRandomizer move)
+    {
+        minimumPower = ClampMovePower(minimumPower);
+        if (minimumPower <= 0)
+            return moves;
+
+        var result = moves.ToArray();
+        var used = new HashSet<int>(result.Where(z => z > 0));
+        for (int i = 0; i < result.Length; i++)
+        {
+            int moveID = result[i];
+            if (IsMoveMeetingMinimumPower(moveID, minimumPower, move))
+                continue;
+
+            int replacement = GetRandomMoveWithMinimumPower(species, minimumPower, used, move);
+            if (replacement <= 0)
+                continue;
+
+            used.Remove(moveID);
+            used.Add(replacement);
+            result[i] = replacement;
+        }
+
+        return result;
+    }
+
+    private static bool IsMoveMeetingMinimumPower(int moveID, int minimumPower, MoveRandomizer move)
+    {
+        if (moveID <= 0 || moveID >= Main.Config.Moves.Length)
+            return false;
+
+        if (move.BannedMoves.Contains(moveID))
+            return false;
+
+        var data = Main.Config.Moves[moveID];
+        return data.Category != 0 && data.Power >= minimumPower;
+    }
+
+    private static int GetRandomMoveWithMinimumPower(int species, int minimumPower, HashSet<int> used, MoveRandomizer move)
+    {
+        int maxMove = Math.Min(Main.Config.Info.MaxMoveID, Main.Config.Moves.Length);
+        int[] types = Main.SpeciesStat[species].Types;
+
+        var eligible = Enumerable.Range(1, maxMove - 1)
+            .Where(m => !used.Contains(m))
+            .Where(m => IsMoveMeetingMinimumPower(m, minimumPower, move))
+            .ToList();
+
+        if (eligible.Count == 0)
+            return 0;
+
+        var stab = eligible.Where(m => types.Contains(Main.Config.Moves[m].Type)).ToList();
+        if (move.rSTAB && stab.Count > 0)
+            return stab[(int)(Util.Random32() % stab.Count)];
+
+        return eligible[(int)(Util.Random32() % eligible.Count)];
+    }
+
     private void AddProgressiveBSTControls()
     {
         int y = CHK_BST.Bottom + 6;
@@ -1353,6 +1476,49 @@ public partial class SMTE : Form
         Tab_PKM1.Controls.Add(B_SetLevelCaps);
         CHK_LevelCaps.BringToFront();
         B_SetLevelCaps.BringToFront();
+
+        int y2 = CHK_LevelCaps.Bottom + 6;
+        CHK_RandomDoubleBattles = new CheckBox
+        {
+            AutoSize = true,
+            Location = new Point(CHK_BST.Left, y2),
+            Name = "CHK_RandomDoubleBattles",
+            TabIndex = 1003,
+            Text = "Random double battles",
+            UseVisualStyleBackColor = true,
+        };
+
+        NUD_DoubleBattleChance = new NumericUpDown
+        {
+            Location = new Point(CHK_BST.Left + 145, y2 - 2),
+            Name = "NUD_DoubleBattleChance",
+            Size = new Size(55, 20),
+            TabIndex = 1004,
+            Minimum = 0,
+            Maximum = 100,
+            Value = 15,
+            Enabled = false,
+        };
+
+        var L_DoubleBattlePercent = new Label
+        {
+            AutoSize = true,
+            Location = new Point(NUD_DoubleBattleChance.Right + 5, NUD_DoubleBattleChance.Top + 3),
+            Name = "L_DoubleBattlePercent",
+            Text = "% double",
+        };
+
+        CHK_RandomDoubleBattles.CheckedChanged += (_, _) =>
+        {
+            NUD_DoubleBattleChance.Enabled = CHK_RandomDoubleBattles.Checked;
+        };
+
+        Tab_PKM1.Controls.Add(CHK_RandomDoubleBattles);
+        Tab_PKM1.Controls.Add(NUD_DoubleBattleChance);
+        Tab_PKM1.Controls.Add(L_DoubleBattlePercent);
+        CHK_RandomDoubleBattles.BringToFront();
+        NUD_DoubleBattleChance.BringToFront();
+        L_DoubleBattlePercent.BringToFront();
     }
 
     private void B_HighAttack_Click(object sender, EventArgs e)

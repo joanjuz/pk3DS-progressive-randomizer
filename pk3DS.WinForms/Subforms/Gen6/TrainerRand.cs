@@ -209,6 +209,8 @@ public partial class TrainerRand : Form
     private Button B_SetManualBST;
     private CheckBox CHK_LevelCaps;
     private Button B_SetLevelCaps;
+    private CheckBox CHK_RandomDoubleBattles;
+    private NumericUpDown NUD_DoubleBattleChance;
 
     private List<ProgressiveBSTRule> ProgressiveBSTRules = GetDefaultProgressiveBSTRules();
     private List<TrainerLevelCapRule> LevelCapRules = [];
@@ -242,6 +244,8 @@ public partial class TrainerRand : Form
         RSTE.rLevelCapPreviousGap = PreviousTrainerGap;
         RSTE.rLevelCapCurvePower = RegularTrainerCurvePower;
         RSTE.rLevelCapsGuaranteeMega = GuaranteeMegaInImportantBattles;
+        RSTE.rRandomDoubleBattles = CHK_RandomDoubleBattles.Checked;
+        RSTE.rRandomDoubleBattleChance = (int)NUD_DoubleBattleChance.Value;
         RSTE.rNoFixedDamage = CHK_NoFixedDamage.Checked;
 
         RSTE.rMove = CB_Moves.SelectedIndex == 1;
@@ -437,7 +441,49 @@ public partial class TrainerRand : Form
         CHK_LevelCaps.BringToFront();
         B_SetLevelCaps.BringToFront();
 
-        int requiredTopWidth = B_SetLevelCaps.Right + 16;
+        CHK_RandomDoubleBattles = new CheckBox
+        {
+            AutoSize = true,
+            Location = new System.Drawing.Point(CHK_LevelCaps.Left, CHK_LevelCaps.Bottom + 8),
+            Name = "CHK_RandomDoubleBattles",
+            TabIndex = 1003,
+            Text = "Random double battles",
+            UseVisualStyleBackColor = true,
+        };
+
+        NUD_DoubleBattleChance = new NumericUpDown
+        {
+            Location = new System.Drawing.Point(B_SetLevelCaps.Left, CHK_RandomDoubleBattles.Top - 2),
+            Name = "NUD_DoubleBattleChance",
+            Size = new System.Drawing.Size(55, 20),
+            TabIndex = 1004,
+            Minimum = 0,
+            Maximum = 100,
+            Value = 15,
+            Enabled = false,
+        };
+
+        var L_DoubleBattlePercent = new Label
+        {
+            AutoSize = true,
+            Location = new System.Drawing.Point(NUD_DoubleBattleChance.Right + 5, NUD_DoubleBattleChance.Top + 3),
+            Name = "L_DoubleBattlePercent",
+            Text = "% double",
+        };
+
+        CHK_RandomDoubleBattles.CheckedChanged += (_, _) =>
+        {
+            NUD_DoubleBattleChance.Enabled = CHK_RandomDoubleBattles.Checked;
+        };
+
+        Controls.Add(CHK_RandomDoubleBattles);
+        Controls.Add(NUD_DoubleBattleChance);
+        Controls.Add(L_DoubleBattlePercent);
+        CHK_RandomDoubleBattles.BringToFront();
+        NUD_DoubleBattleChance.BringToFront();
+        L_DoubleBattlePercent.BringToFront();
+
+        int requiredTopWidth = Math.Max(B_SetLevelCaps.Right, L_DoubleBattlePercent.Right) + 16;
         if (ClientSize.Width < requiredTopWidth)
             ClientSize = new System.Drawing.Size(requiredTopWidth, ClientSize.Height);
 
@@ -447,6 +493,10 @@ public partial class TrainerRand : Form
             GB_Tweak.Width = requiredGroupWidth;
 
         int requiredFormWidth = GB_Tweak.Right + 16;
+
+        int requiredFormHeight = CHK_RandomDoubleBattles.Bottom + 44;
+        if (ClientSize.Height < requiredFormHeight)
+            ClientSize = new System.Drawing.Size(ClientSize.Width, requiredFormHeight);
 
         if (ClientSize.Width < requiredFormWidth)
             ClientSize = new System.Drawing.Size(requiredFormWidth, ClientSize.Height);

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
@@ -17,19 +17,30 @@ public static class TrainerLevelCapDialog
         ref decimal regularTrainerCurvePower,
         ref bool guaranteeMegaInImportantBattles)
     {
+        // guaranteeMegaInImportantBattles is kept in the signature for compatibility with older callers.
+        // Mega is now configured per trainer with TrainerLevelCapRule.GuaranteeMega.
         using var form = new Form
         {
             Text = "Trainer Level Caps",
             StartPosition = FormStartPosition.CenterParent,
-            Size = new Size(840, 560),
+            Size = new Size(1080, 590),
             MinimizeBox = false,
             MaximizeBox = false,
-            FormBorderStyle = FormBorderStyle.FixedDialog,
+            FormBorderStyle = FormBorderStyle.Sizable,
+            MinimumSize = new Size(980, 520),
         };
 
         var editableRules = new BindingList<TrainerLevelCapRule>(
             rules.Select(r => r.Clone()).ToList()
         );
+
+        // If an older settings flow enabled global Mega, migrate it into every enabled rule once.
+        if (guaranteeMegaInImportantBattles)
+        {
+            foreach (var rule in editableRules.Where(z => z.Enabled))
+                rule.GuaranteeMega = true;
+            guaranteeMegaInImportantBattles = false;
+        }
 
         var grid = new DataGridView
         {
@@ -40,6 +51,7 @@ public static class TrainerLevelCapDialog
             AllowUserToDeleteRows = false,
             SelectionMode = DataGridViewSelectionMode.FullRowSelect,
             MultiSelect = true,
+            AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None,
         };
 
         grid.Columns.Add(new DataGridViewCheckBoxColumn
@@ -47,6 +59,20 @@ public static class TrainerLevelCapDialog
             DataPropertyName = nameof(TrainerLevelCapRule.Enabled),
             HeaderText = "Use",
             Width = 45,
+        });
+        grid.Columns.Add(new DataGridViewCheckBoxColumn
+        {
+            DataPropertyName = nameof(TrainerLevelCapRule.GuaranteeMega),
+            HeaderText = "Mega",
+            ToolTipText = "Guarantee at least one Mega in this selected important battle.",
+            Width = 55,
+        });
+        grid.Columns.Add(new DataGridViewTextBoxColumn
+        {
+            DataPropertyName = nameof(TrainerLevelCapRule.MinMovePower),
+            HeaderText = "Min Move Power (0=Off)",
+            ToolTipText = "Minimum move power for randomized/level-up trainer moves in this battle. 0 disables it.",
+            Width = 130,
         });
         grid.Columns.Add(new DataGridViewTextBoxColumn
         {
@@ -88,10 +114,9 @@ public static class TrainerLevelCapDialog
         var options = new FlowLayoutPanel
         {
             Dock = DockStyle.Top,
-            Height = 98,
+            Height = 42,
             Padding = new Padding(8, 6, 8, 4),
             FlowDirection = FlowDirection.LeftToRight,
-            WrapContents = true,
         };
 
         var chkPrevious = new CheckBox
@@ -114,52 +139,17 @@ public static class TrainerLevelCapDialog
             Padding = new Padding(0, 4, 0, 0),
         };
 
-        var curveLabel = new Label
-        {
-            AutoSize = true,
-            Text = "Organic curve power",
-            Padding = new Padding(18, 4, 0, 0),
-        };
-        var nudCurve = new NumericUpDown
-        {
-            Minimum = 1.0m,
-            Maximum = 4.0m,
-            Increment = 0.1m,
-            DecimalPlaces = 1,
-            Value = Math.Min(Math.Max(regularTrainerCurvePower, 1.0m), 4.0m),
-            Width = 55,
-        };
-        var curveNote = new Label
-        {
-            AutoSize = true,
-            Text = "1.0 = linear, higher = slower early / faster near the cap",
-            Padding = new Padding(0, 4, 0, 0),
-        };
-
-        var chkMega = new CheckBox
-        {
-            AutoSize = true,
-            Checked = guaranteeMegaInImportantBattles,
-            Text = "Guarantee at least one Mega in selected important battles",
-            Padding = new Padding(0, 4, 0, 0),
-        };
-
         options.Controls.Add(chkPrevious);
         options.Controls.Add(nudGap);
         options.Controls.Add(gapLabel);
-        options.Controls.Add(curveLabel);
-        options.Controls.Add(nudCurve);
-        options.Controls.Add(curveNote);
-        options.SetFlowBreak(curveNote, true);
-        options.Controls.Add(chkMega);
 
         var note = new Label
         {
             Dock = DockStyle.Bottom,
-            Height = 38,
+            Height = 46,
             TextAlign = ContentAlignment.MiddleLeft,
             Padding = new Padding(8, 0, 8, 0),
-            Text = "LevelCap 0 uses the trainer's current ace. Selected trainers are homogenized to the cap. Regular trainers ramp organically toward the next cap - gap. Ace level 5 opening rival fights are protected. Mega option applies only to selected important trainers.",
+            Text = "LevelCap 0 uses the trainer's current ace. Selected trainers are homogenized to the cap. Regular trainers keep the original level curve but are shifted so the trainers before the next cap approach cap - gap. Min Move Power 0 disables per-trainer move filtering.",
         };
 
         var buttons = new FlowLayoutPanel
@@ -181,8 +171,6 @@ public static class TrainerLevelCapDialog
         List<TrainerLevelCapRule> acceptedRules = null;
         bool acceptedPrevious = applyCapsToPreviousTrainers;
         int acceptedGap = previousTrainerGap;
-        decimal acceptedCurve = regularTrainerCurvePower;
-        bool acceptedMega = guaranteeMegaInImportantBattles;
 
         ok.Click += (_, _) =>
         {
@@ -199,8 +187,6 @@ public static class TrainerLevelCapDialog
             acceptedRules = candidateRules;
             acceptedPrevious = chkPrevious.Checked;
             acceptedGap = (int)nudGap.Value;
-            acceptedCurve = nudCurve.Value;
-            acceptedMega = chkMega.Checked;
             form.DialogResult = DialogResult.OK;
             form.Close();
         };
@@ -221,8 +207,6 @@ public static class TrainerLevelCapDialog
         rules = acceptedRules;
         applyCapsToPreviousTrainers = acceptedPrevious;
         previousTrainerGap = acceptedGap;
-        regularTrainerCurvePower = acceptedCurve;
-        guaranteeMegaInImportantBattles = acceptedMega;
         return true;
     }
 
@@ -240,6 +224,12 @@ public static class TrainerLevelCapDialog
             if (rule.LevelCap != 0 && (rule.LevelCap < 1 || rule.LevelCap > 100))
             {
                 WinFormsUtil.Alert("Invalid level cap detected. Use 0 for the current ace level, or a value from 1 to 100.");
+                return false;
+            }
+
+            if (rule.MinMovePower < 0 || rule.MinMovePower > 250)
+            {
+                WinFormsUtil.Alert("Invalid minimum move power detected. Use 0 to disable it, or a value from 1 to 250.");
                 return false;
             }
         }

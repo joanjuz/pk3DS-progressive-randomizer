@@ -16,9 +16,43 @@ public partial class ItemEditor7 : Form
         itemlist[0] = "";
 
         InitializeComponent();
-        Setup();
+        Setup(); AddFixEconomyButton(); }
+
+        private void AddFixEconomyButton()
+    {
+        var button = new Button
+        {
+            Location = new System.Drawing.Point(B_Table.Left - 118, B_Table.Top),
+            Name = "B_FixEconomy",
+            Size = new System.Drawing.Size(112, B_Table.Height),
+            TabIndex = B_Table.TabIndex + 1,
+            Text = "Fix Economy",
+            UseVisualStyleBackColor = true,
+        };
+
+        button.Click += B_FixEconomy_Click;
+        Controls.Add(button);
+        button.BringToFront();
     }
 
+    private void B_FixEconomy_Click(object sender, EventArgs e)
+    {
+        if (DialogResult.Yes != WinFormsUtil.Prompt(
+            MessageBoxButtons.YesNo,
+            "Fix economy?",
+            "This will set all TM/HM buy prices to 1000, PokÃ© Ball to 100, Great Ball to 150, Ultra Ball to 200, and Repel/Super Repel/Max Repel to 50."))
+        {
+            return;
+        }
+
+        SetEntry();
+        int changed = EconomyFixer.Apply(files);
+        GetEntry();
+
+        WinFormsUtil.Alert(
+            "Economy fixed!",
+            $"{changed} item prices were updated.");
+    }
     private readonly byte[][] files;
     private readonly string[] itemlist = Main.Config.GetText(TextName.ItemNames);
     private readonly string[] itemflavor = Main.Config.GetText(TextName.ItemFlavor);

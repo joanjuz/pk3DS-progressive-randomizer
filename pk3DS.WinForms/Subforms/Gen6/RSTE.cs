@@ -455,6 +455,8 @@ public partial class RSTE : Form
 
     public static bool rNoFixedDamage;
     public static bool rUseLevelCaps, rLevelCapsApplyPrevious, rLevelCapsGuaranteeMega;
+    public static bool rRandomDoubleBattles;
+    public static int rRandomDoubleBattleChance;
     public static int rLevelCapPreviousGap;
     public static decimal rLevelCapCurvePower;
     public static List<ProgressiveBSTRule> rProgressiveBSTRules = [];
@@ -560,7 +562,8 @@ public partial class RSTE : Form
 
         // Fetch Move Stats for more difficult randomization
 
-        bool guaranteeAnyMega = rEnsureMEvo.Length > 0 || (rUseLevelCaps && rLevelCapsGuaranteeMega && rLevelCapRules.Any(r => r.Enabled));
+        bool guaranteeAnyMega = rEnsureMEvo.Length > 0
+            || (rUseLevelCaps && rLevelCapRules.Any(r => r.Enabled && r.GuaranteeMega));
         if (guaranteeAnyMega)
         {
             if (mEvoTypes.Length < 13 && rTypeTheme)
@@ -636,12 +639,14 @@ public partial class RSTE : Form
             int trainerAce = GetAceLevel(t);
             bool mevo = ShouldGuaranteeMega(i, trainerAce, levelCapStages);
             int? targetLevel = GetTrainerTargetLevel(i, trainerAce, levelCapStages, out bool forceExactLevel);
+            int minimumMovePower = GetTrainerMinimumMovePower(i, levelCapStages);
 
             SetMinMaxPKM(t);
             SetFullParties(t, rImportant[i] == null);
+            ApplyRandomDoubleBattle(t, trainerAce);
             RandomizeTrainerAIClass(t, trClass);
             RandomizeTrainerPrizeItem(t);
-            RandomizeTeam(t, move, learn, itemvals, type, mevo, typerand, targetLevel, forceExactLevel, trainerAce);
+            RandomizeTeam(t, move, learn, itemvals, type, mevo, typerand, targetLevel, forceExactLevel, trainerAce, minimumMovePower);
 
             trdata[i] = t.Write();
             trpoke[i] = t.WriteTeam();
@@ -669,6 +674,8 @@ public partial class RSTE : Form
                 TrainerID = rule.TrainerID,
                 OriginalAceLevel = ace,
                 LevelCap = ClampLevel(cap),
+                GuaranteeMega = rule.GuaranteeMega,
+                MinMovePower = ClampMovePower(rule.MinMovePower),
             });
         }
 
@@ -690,9 +697,6 @@ public partial class RSTE : Form
         if (!rUseLevelCaps || stages.Count == 0)
             return null;
 
-        if (IsProtectedOpeningBattle(trainerAce))
-            return null;
-
         var exact = stages.FirstOrDefault(s => s.TrainerID == trainerID);
         if (exact is not null)
         {
@@ -710,31 +714,38 @@ public partial class RSTE : Form
         int nextIndex = stages.IndexOf(next);
         TrainerLevelCapStage previous = nextIndex > 0 ? stages[nextIndex - 1] : null;
 
-        int startAce = previous?.OriginalAceLevel ?? 5;
-        int startTarget = previous?.LevelCap ?? startAce;
-        int endAce = next.OriginalAceLevel;
+        // Preserve the game's original trainer curve instead of flattening everyone far below the cap.
+        // If the next important trainer moved by +N levels, regular trainers before it also move by +N.
         int endTarget = ClampLevel(next.LevelCap - rLevelCapPreviousGap);
+        int deltaToNextCap = endTarget - next.OriginalAceLevel;
+        int target = ClampLevel(trainerAce + deltaToNextCap);
 
-        if (endAce <= startAce)
-            return endTarget;
-
-        double progress = Math.Clamp((trainerAce - startAce) / (double)(endAce - startAce), 0, 1);
-        double curvePower = Math.Clamp((double)rLevelCapCurvePower, 1.0, 4.0);
-        double curvedProgress = Math.Pow(progress, curvePower);
-        int target = (int)Math.Round(startTarget + ((endTarget - startTarget) * curvedProgress));
+        // Do not let trainers after a previous cap fall below that previous cap when caps were raised.
+        if (previous is not null && trainerAce > previous.OriginalAceLevel)
+            target = Math.Max(target, previous.LevelCap);
 
         return ClampLevel(target);
     }
 
     private static bool ShouldGuaranteeMega(int trainerID, int trainerAce, List<TrainerLevelCapStage> stages)
     {
-        if (IsProtectedOpeningBattle(trainerAce))
-            return false;
-
         if (rEnsureMEvo.Contains(trainerID))
             return true;
 
-        return rLevelCapsGuaranteeMega && stages.Any(s => s.TrainerID == trainerID);
+        return stages.Any(s => s.TrainerID == trainerID && s.GuaranteeMega);
+    }
+
+    private static int GetTrainerMinimumMovePower(int trainerID, List<TrainerLevelCapStage> stages)
+    {
+        var stage = stages.FirstOrDefault(s => s.TrainerID == trainerID);
+        return stage is null ? 0 : ClampMovePower(stage.MinMovePower);
+    }
+
+    private static int ClampMovePower(int power)
+    {
+        if (power < 0)
+            return 0;
+        return power > 250 ? 250 : power;
     }
 
     private static bool IsProtectedOpeningBattle(int trainerAce) => trainerAce <= 5;
@@ -797,7 +808,7 @@ public partial class RSTE : Form
             rule.MaxBST
         );
     }
-    private static void RandomizeTeam(TrainerData6 t, MoveRandomizer move, LearnsetRandomizer learn, ushort[] itemvals, int type, bool mevo, bool typerand, int? targetLevel, bool forceExactLevel, int trainerAce)
+    private static void RandomizeTeam(TrainerData6 t, MoveRandomizer move, LearnsetRandomizer learn, ushort[] itemvals, int type, bool mevo, bool typerand, int? targetLevel, bool forceExactLevel, int trainerAce, int minimumMovePower)
     {
         int last = t.Team.Length - 1;
         for (int p = 0; p < t.Team.Length; p++)
@@ -913,7 +924,73 @@ public partial class RSTE : Form
                 for (int m = 0; m < 4; m++)
                     pk.Moves[m] = (ushort)pkMoves[m];
             }
+
+            if (minimumMovePower > 0 && !rMetronome)
+            {
+                t.Moves = true;
+                var pkMoves = EnsureMinimumMovePower(pk.Moves.Select(z => (int)z).ToArray(), pk.Species, minimumMovePower, move);
+                for (int m = 0; m < 4; m++)
+                    pk.Moves[m] = (ushort)pkMoves[m];
+            }
         }
+    }
+
+    private static int[] EnsureMinimumMovePower(int[] moves, int species, int minimumPower, MoveRandomizer move)
+    {
+        minimumPower = ClampMovePower(minimumPower);
+        if (minimumPower <= 0)
+            return moves;
+
+        var result = moves.ToArray();
+        var used = new HashSet<int>(result.Where(z => z > 0));
+        for (int i = 0; i < result.Length; i++)
+        {
+            int moveID = result[i];
+            if (IsMoveMeetingMinimumPower(moveID, minimumPower, move))
+                continue;
+
+            int replacement = GetRandomMoveWithMinimumPower(species, minimumPower, used, move);
+            if (replacement <= 0)
+                continue;
+
+            used.Remove(moveID);
+            used.Add(replacement);
+            result[i] = replacement;
+        }
+
+        return result;
+    }
+
+    private static bool IsMoveMeetingMinimumPower(int moveID, int minimumPower, MoveRandomizer move)
+    {
+        if (moveID <= 0 || moveID >= Main.Config.Moves.Length)
+            return false;
+
+        if (move.BannedMoves.Contains(moveID))
+            return false;
+
+        var data = Main.Config.Moves[moveID];
+        return data.Category != 0 && data.Power >= minimumPower;
+    }
+
+    private static int GetRandomMoveWithMinimumPower(int species, int minimumPower, HashSet<int> used, MoveRandomizer move)
+    {
+        int maxMove = Math.Min(Main.Config.Info.MaxMoveID, Main.Config.Moves.Length);
+        int[] types = Main.SpeciesStat[species].Types;
+
+        var eligible = Enumerable.Range(1, maxMove - 1)
+            .Where(m => !used.Contains(m))
+            .Where(m => IsMoveMeetingMinimumPower(m, minimumPower, move))
+            .ToList();
+
+        if (eligible.Count == 0)
+            return 0;
+
+        var stab = eligible.Where(m => types.Contains(Main.Config.Moves[m].Type)).ToList();
+        if (move.rSTAB && stab.Count > 0)
+            return stab[(int)(Rand() % stab.Count)];
+
+        return eligible[(int)(Rand() % eligible.Count)];
     }
 
     private static void SetMinMaxPKM(TrainerData6 t)
@@ -974,6 +1051,48 @@ public partial class RSTE : Form
                     Level = (ushort)avgLevel,
                 };
         }
+    }
+
+
+    private static void ApplyRandomDoubleBattle(TrainerData6 t, int trainerAce)
+    {
+        if (!rRandomDoubleBattles || rRandomDoubleBattleChance <= 0)
+            return;
+
+        // Only convert regular single battles. Do not touch existing Double/Triple/Rotation/Horde battles.
+        if (t.BattleType != 0)
+            return;
+
+        if (Rand() % 100 >= rRandomDoubleBattleChance)
+            return;
+
+        EnsureAtLeastTwoPokemon(t);
+        t.BattleType = 1;
+    }
+
+    private static void EnsureAtLeastTwoPokemon(TrainerData6 t)
+    {
+        if (t.NumPokemon >= 2 || t.Team.Length >= 2)
+        {
+            t.NumPokemon = Math.Max(t.NumPokemon, (byte)Math.Min(t.Team.Length, 6));
+            return;
+        }
+
+        if (t.Team.Length == 0)
+            return;
+
+        Array.Resize(ref t.Team, 2);
+        t.Team[1] = new TrainerData6.Pokemon(t.Team[0].Write(t.Item, t.Moves), t.Item, t.Moves)
+        {
+            Species = t.Team[0].Species,
+            Level = t.Team[0].Level,
+            Form = t.Team[0].Form,
+            Gender = t.Team[0].Gender,
+            Ability = t.Team[0].Ability,
+            Item = t.Team[0].Item,
+            IVs = t.Team[0].IVs,
+        };
+        t.NumPokemon = 2;
     }
 
     private static void RandomizeTrainerAIClass(TrainerData6 t, string[] trClass)
