@@ -163,6 +163,7 @@ public partial class StaticEncounterEditor7 : Form
         TC_Tabs.SelectedIndex = TC_Tabs.TabCount - 1;
 
         RandSettings.GetFormSettings(this, Tab_Randomizer.Controls);
+        AddTradeUtilityButtons();
         // ExportEncounters();
     }
 
@@ -185,6 +186,118 @@ public partial class StaticEncounterEditor7 : Form
     private int gEntry = -1;
     private int eEntry = -1;
     private int tEntry = -1;
+    private Button B_TradeAnyRequest;
+    private Button B_TradeAcceptAnyRandomOffer;
+
+    private void AddTradeUtilityButtons()
+    {
+        const int gap = 6;
+        int left = CB_TRequest.Left;
+        int top = CB_TRequest.Bottom + gap;
+        int width = 230;
+        int height = CB_TRequest.Height;
+
+        B_TradeAnyRequest = new Button
+        {
+            Location = new System.Drawing.Point(left, top),
+            Name = "B_TradeAnyRequest",
+            Size = new System.Drawing.Size(width, height),
+            Text = "Trades accept any PokÃ©mon",
+            UseVisualStyleBackColor = true,
+        };
+        B_TradeAnyRequest.Click += B_TradeAnyRequest_Click;
+
+        B_TradeAcceptAnyRandomOffer = new Button
+        {
+            Location = new System.Drawing.Point(left, top + height + gap),
+            Name = "B_TradeAcceptAnyRandomOffer",
+            Size = new System.Drawing.Size(width, height),
+            Text = "Any request + random offer",
+            UseVisualStyleBackColor = true,
+        };
+        B_TradeAcceptAnyRandomOffer.Click += B_TradeAcceptAnyRandomOffer_Click;
+
+        Tab_Trades.Controls.Add(B_TradeAnyRequest);
+        Tab_Trades.Controls.Add(B_TradeAcceptAnyRandomOffer);
+        B_TradeAnyRequest.BringToFront();
+        B_TradeAcceptAnyRandomOffer.BringToFront();
+    }
+
+    private void B_TradeAnyRequest_Click(object sender, EventArgs e)
+    {
+        if (WinFormsUtil.Prompt(
+            MessageBoxButtons.YesNo,
+            "Make all in-game trades accept any PokÃ©mon?",
+            "This sets Requested Species to (None) for every in-game trade. The NPC will still give the same PokÃ©mon unless you also randomize the offered PokÃ©mon.") != DialogResult.Yes)
+        {
+            return;
+        }
+
+        SetTrade();
+
+        foreach (EncounterTrade7 trade in Trades)
+            trade.TradeRequestSpecies = 0;
+
+        GetListBoxEntries();
+        if (LB_Trade.Items.Count > 0)
+            LB_Trade.SelectedIndex = Math.Min(Math.Max(tEntry, 0), LB_Trade.Items.Count - 1);
+        GetTrade();
+
+        WinFormsUtil.Alert("Trades updated!", $"{Trades.Length} in-game trades now accept any PokÃ©mon.");
+    }
+
+    private void B_TradeAcceptAnyRandomOffer_Click(object sender, EventArgs e)
+    {
+        if (WinFormsUtil.Prompt(
+            MessageBoxButtons.YesNo,
+            "Randomize in-game trades?",
+            "This will make every in-game trade accept any PokÃ©mon and randomize the PokÃ©mon the NPC gives you. This does not change the party-only selection UI.") != DialogResult.Yes)
+        {
+            return;
+        }
+
+        SetTrade();
+
+        var specrand = GetRandomizer();
+        var formrand = new FormRandomizer(Main.Config)
+        {
+            AllowMega = CHK_AllowMega.Checked,
+            AllowAlolanForm = true,
+        };
+        var items = Randomizer.GetRandomItemList();
+        int randFinalEvo() => (int)(Util.Random32() % FinalEvo.Length);
+
+        foreach (EncounterTrade7 trade in Trades)
+        {
+            trade.TradeRequestSpecies = 0;
+            trade.Species = specrand.GetRandomSpecies(trade.Species);
+
+            if (CHK_Item.Checked)
+                trade.HeldItem = items[Util.Random32() % items.Length];
+
+            if (CHK_Level.Checked)
+                trade.Level = Randomizer.GetModifiedLevel(trade.Level, NUD_LevelBoost.Value);
+
+            if (CHK_RandomAbility.Checked)
+                trade.Ability = Util.Rand.Next(0, 3);
+
+            if (CHK_ForceFullyEvolved.Checked && trade.Level >= NUD_ForceFullyEvolved.Value && !FinalEvo.Contains(trade.Species))
+                trade.Species = FinalEvo[randFinalEvo()];
+
+            trade.Form = Randomizer.GetRandomForme(trade.Species, CHK_AllowMega.Checked, true, Main.SpeciesStat);
+            trade.Gender = 0;
+            trade.Nature = (int)(Util.Random32() % CB_TNature.Items.Count);
+            trade.IVs = [-1, -1, -1, -1, -1, -1];
+        }
+
+        GetListBoxEntries();
+        if (LB_Trade.Items.Count > 0)
+            LB_Trade.SelectedIndex = Math.Min(Math.Max(tEntry, 0), LB_Trade.Items.Count - 1);
+        GetTrade();
+
+        WinFormsUtil.Alert("Trades randomized!", $"{Trades.Length} in-game trades now accept any PokÃ©mon and give randomized PokÃ©mon.");
+    }
+
 
     private void B_Save_Click(object sender, EventArgs e)
     {

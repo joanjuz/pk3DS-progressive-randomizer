@@ -1,4 +1,4 @@
-/*----------------------------------------------------------------------------*/
+﻿/*----------------------------------------------------------------------------*/
 /*--  This program is free software: you can redistribute it and/or modify  --*/
 /*--  it under the terms of the GNU General Public License as published by  --*/
 /*--  the Free Software Foundation, either version 3 of the License, or     --*/
@@ -493,9 +493,77 @@ public sealed partial class Main : Form
 
         FLP_RomFS.Controls.AddRange(romfs);
         FLP_ExeFS.Controls.AddRange(exefs);
+        AddGen6TradePatchButtonIfNeeded();
         FLP_CRO.Controls.AddRange(cro);
     }
 
+    private Button B_ORASTradePatch;
+
+    private void AddGen6TradePatchButtonIfNeeded()
+    {
+        if (Config?.Generation != 6)
+            return;
+
+        B_ORASTradePatch ??= new Button
+        {
+            Name = "B_ORASTradePatch",
+            Size = new System.Drawing.Size(140, 23),
+            Text = "Gen6 Trade Patch",
+            UseVisualStyleBackColor = true,
+        };
+
+        B_ORASTradePatch.Click -= B_ORASTradePatch_Click;
+        B_ORASTradePatch.Click += B_ORASTradePatch_Click;
+
+        if (!FLP_ExeFS.Controls.Contains(B_ORASTradePatch))
+            FLP_ExeFS.Controls.Add(B_ORASTradePatch);
+    }
+
+    private void B_ORASTradePatch_Click(object sender, EventArgs e)
+    {
+        if (ThreadActive())
+            return;
+
+        if (ExeFSPath == null)
+        {
+            WinFormsUtil.Alert(
+                "No ExeFS loaded.",
+                "Load an unpacked Gen 6 ExeFS folder with decompressed code.bin first.");
+            return;
+        }
+
+        string patchMessage = Config.ORAS
+            ? "This patches code.bin so ORAS in-game trades accept any Pokemon.\n" +
+              "It also enables the known PC/Box selector patch.\n\n" +
+              "You can optionally randomize the Pokemon given by trade NPCs."
+            : "This patches code.bin so X/Y in-game trades accept any Pokemon.\n\n" +
+              "You can optionally randomize the Pokemon given by trade NPCs.";
+
+        if (DialogResult.Yes != WinFormsUtil.Prompt(
+            MessageBoxButtons.YesNo,
+            "Apply Gen 6 trade patch?",
+            patchMessage,
+            "Continue?"))
+        {
+            return;
+        }
+
+        bool randomizeOffers = DialogResult.Yes == WinFormsUtil.Prompt(
+            MessageBoxButtons.YesNo,
+            "Randomize NPC trade offers too?",
+            "Yes = also randomize the Pokemon given by trade NPCs.",
+            "No = only apply accept-any trade patch.");
+
+        try
+        {
+            string report = Gen6TradePatcher.ApplyGen6TradePatch(ExeFSPath, Config, randomizeOffers);
+            WinFormsUtil.Alert("Gen 6 trade patch applied!", report);
+        }
+        catch (Exception ex)
+        {
+            WinFormsUtil.Error("Gen 6 trade patch failed.", ex.Message);
+        }
+    }
     private void UpdateProgramTitle() => Text = GetProgramTitle();
 
     private static string GetProgramTitle()

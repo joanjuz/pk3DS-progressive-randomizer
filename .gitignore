@@ -286,4 +286,21 @@ MapImages/
 "*.cxi",
 "*.cci",
 "*.pdb"
+@(
+"publish/",
+"release_v4.3/",
+"release_v4.4/",
+"release_v4.5/",
+"release_v4.5.2/",
+"catch_zone_templates/",
+"mapGR/",
+"encdata/",
+"mapMatrix/",
+"MapImages/",
+"*_g/",
+"*.3ds",
+"*.cia",
+"*.cxi",
+"*.cci",
+"*.pdb"
 ) | Add-Content .gitignore

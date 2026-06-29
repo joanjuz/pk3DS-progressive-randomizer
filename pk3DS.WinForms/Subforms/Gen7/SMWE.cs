@@ -39,6 +39,7 @@ public partial class SMWE : Form
 
         LoadData();
         RandSettings.GetFormSettings(this, GB_Tweak.Controls);
+        AddAdvancedWildLevelScaler();
 
         var weather = string.Format("If weather is active, create a random number.{0}If 0, use slot 0.{0}If <= 10, use slot 1.{0}Else, pick an SOS table and a slot.", Environment.NewLine);
         new ToolTip().SetToolTip(L_AddSOS, weather);
@@ -433,6 +434,161 @@ public partial class SMWE : Form
             ModifyLevel = CHK_Level.Checked,
         };
         wild7.Execute(Areas, encdata);
+    }
+    private Button? B_AdvancedWildLevels;
+    private NumericUpDown? NUD_WildLevelFlat;
+    private NumericUpDown? NUD_WildLevelMultiplier;
+    private CheckBox? CHK_WildLevelKeepRange;
+
+    private void AddAdvancedWildLevelScaler()
+    {
+        if (GB_Tweak.Controls.ContainsKey("B_AdvancedWildLevels"))
+            return;
+
+        int y = GB_Tweak.Controls.Cast<Control>().Select(z => z.Bottom).DefaultIfEmpty(10).Max() + 8;
+
+        var title = new Label
+        {
+            Name = "L_AdvancedWildLevels",
+            Text = "Wild level scaling",
+            AutoSize = true,
+            Location = new System.Drawing.Point(8, y + 4),
+        };
+
+        NUD_WildLevelFlat = new NumericUpDown
+        {
+            Name = "NUD_WildLevelFlat",
+            Minimum = -100,
+            Maximum = 100,
+            Value = 0,
+            Width = 52,
+            Location = new System.Drawing.Point(120, y),
+        };
+
+        var flatLabel = new Label
+        {
+            Text = "+ flat",
+            AutoSize = true,
+            Location = new System.Drawing.Point(176, y + 4),
+        };
+
+        NUD_WildLevelMultiplier = new NumericUpDown
+        {
+            Name = "NUD_WildLevelMultiplier",
+            Minimum = 1,
+            Maximum = 500,
+            Value = 100,
+            Width = 58,
+            Location = new System.Drawing.Point(230, y),
+        };
+
+        var multLabel = new Label
+        {
+            Text = "%",
+            AutoSize = true,
+            Location = new System.Drawing.Point(292, y + 4),
+        };
+
+        CHK_WildLevelKeepRange = new CheckBox
+        {
+            Name = "CHK_WildLevelKeepRange",
+            Text = "Keep min/max range",
+            Checked = true,
+            AutoSize = true,
+            Location = new System.Drawing.Point(320, y + 2),
+        };
+
+        B_AdvancedWildLevels = new Button
+        {
+            Name = "B_AdvancedWildLevels",
+            Text = "Apply Wild Levels",
+            Size = new System.Drawing.Size(128, 24),
+            Location = new System.Drawing.Point(470, y - 1),
+        };
+        B_AdvancedWildLevels.Click += ApplyAdvancedWildLevelScaling;
+
+        GB_Tweak.Controls.Add(title);
+        GB_Tweak.Controls.Add(NUD_WildLevelFlat);
+        GB_Tweak.Controls.Add(flatLabel);
+        GB_Tweak.Controls.Add(NUD_WildLevelMultiplier);
+        GB_Tweak.Controls.Add(multLabel);
+        GB_Tweak.Controls.Add(CHK_WildLevelKeepRange);
+        GB_Tweak.Controls.Add(B_AdvancedWildLevels);
+
+        int required = B_AdvancedWildLevels.Bottom + 10;
+        if (GB_Tweak.Height < required)
+        {
+            int extra = required - GB_Tweak.Height;
+            GB_Tweak.Height += extra;
+            ClientSize = new System.Drawing.Size(ClientSize.Width, ClientSize.Height + extra);
+        }
+    }
+
+    private void ApplyAdvancedWildLevelScaling(object? sender, EventArgs e)
+    {
+        if (DialogResult.Yes != WinFormsUtil.Prompt(
+            MessageBoxButtons.YesNo,
+            "Apply wild level scaling?",
+            "This will modify every current wild encounter level range. Cannot undo."))
+        {
+            return;
+        }
+
+        Enabled = false;
+        int changed = 0;
+        bool keepRange = CHK_WildLevelKeepRange?.Checked ?? true;
+
+        foreach (var area in Areas)
+        {
+            var tables = area.Tables;
+            foreach (var table in tables)
+            {
+                int oldMin = table.MinLevel;
+                int oldMax = table.MaxLevel;
+
+                if (oldMin <= 0 && oldMax <= 0)
+                    continue;
+
+                int newMin;
+                int newMax;
+
+                if (keepRange)
+                {
+                    newMin = ScaleAdvancedWildLevel(oldMin > 0 ? oldMin : oldMax);
+                    newMax = ScaleAdvancedWildLevel(oldMax > 0 ? oldMax : oldMin);
+                }
+                else
+                {
+                    int newLevel = ScaleAdvancedWildLevel(Math.Max(oldMin, oldMax));
+                    newMin = newMax = newLevel;
+                }
+
+                if (newMax < newMin)
+                    (newMin, newMax) = (newMax, newMin);
+
+                if (table.MinLevel == newMin && table.MaxLevel == newMax)
+                    continue;
+
+                table.MinLevel = newMin;
+                table.MaxLevel = newMax;
+                table.Write();
+                changed++;
+            }
+
+            encdata[area.FileNumber] = Area7.GetDayNightTableBinary(tables);
+        }
+
+        Enabled = true;
+        UpdatePanel(sender, e);
+        WinFormsUtil.Alert("Wild levels scaled!", $"Updated {changed} encounter slots.");
+    }
+
+    private int ScaleAdvancedWildLevel(int level)
+    {
+        int flat = (int)(NUD_WildLevelFlat?.Value ?? 0);
+        decimal multiplier = (NUD_WildLevelMultiplier?.Value ?? 100) / 100m;
+        int scaled = (int)Math.Round((level * multiplier) + flat, MidpointRounding.AwayFromZero);
+        return Math.Max(1, Math.Min(100, scaled));
     }
 
     private void CopySOS_Click(object sender, EventArgs e)

@@ -12,6 +12,7 @@ public partial class XYWE : Form
     public XYWE()
     {
         InitializeComponent();
+        AddAdvancedWildLevelScaler();
         All_Species =
         [
             CB_Grass1, CB_Grass2, CB_Grass3, CB_Grass4, CB_Grass5, CB_Grass6, CB_Grass7, CB_Grass8, CB_Grass9, CB_Grass10, CB_Grass11, CB_Grass12,
@@ -666,6 +667,173 @@ public partial class XYWE : Form
         // Enable Interface... modification complete.
         Enabled = true;
         WinFormsUtil.Alert("Modified all Level ranges according to specification!", "Press the Dump Tables button to view the new Level ranges!");
+    }
+    private Button? B_AdvancedWildLevels;
+    private NumericUpDown? NUD_WildLevelFlat;
+    private NumericUpDown? NUD_WildLevelMultiplier;
+    private CheckBox? CHK_WildLevelKeepRange;
+
+    private void AddAdvancedWildLevelScaler()
+    {
+        if (GB_Tweak.Controls.ContainsKey("B_AdvancedWildLevels"))
+            return;
+
+        int y = GB_Tweak.Controls.Cast<Control>().Select(z => z.Bottom).DefaultIfEmpty(10).Max() + 8;
+
+        var title = new Label
+        {
+            Name = "L_AdvancedWildLevels",
+            Text = "Wild level scaling",
+            AutoSize = true,
+            Location = new System.Drawing.Point(8, y + 4),
+        };
+
+        NUD_WildLevelFlat = new NumericUpDown
+        {
+            Name = "NUD_WildLevelFlat",
+            Minimum = -100,
+            Maximum = 100,
+            Value = 0,
+            Width = 52,
+            Location = new System.Drawing.Point(120, y),
+        };
+
+        var flatLabel = new Label
+        {
+            Text = "+ flat",
+            AutoSize = true,
+            Location = new System.Drawing.Point(176, y + 4),
+        };
+
+        NUD_WildLevelMultiplier = new NumericUpDown
+        {
+            Name = "NUD_WildLevelMultiplier",
+            Minimum = 1,
+            Maximum = 500,
+            Value = 100,
+            Width = 58,
+            Location = new System.Drawing.Point(230, y),
+        };
+
+        var multLabel = new Label
+        {
+            Text = "%",
+            AutoSize = true,
+            Location = new System.Drawing.Point(292, y + 4),
+        };
+
+        CHK_WildLevelKeepRange = new CheckBox
+        {
+            Name = "CHK_WildLevelKeepRange",
+            Text = "Keep min/max range",
+            Checked = true,
+            AutoSize = true,
+            Location = new System.Drawing.Point(320, y + 2),
+        };
+
+        B_AdvancedWildLevels = new Button
+        {
+            Name = "B_AdvancedWildLevels",
+            Text = "Apply Wild Levels",
+            Size = new System.Drawing.Size(128, 24),
+            Location = new System.Drawing.Point(470, y - 1),
+        };
+        B_AdvancedWildLevels.Click += ApplyAdvancedWildLevelScaling;
+
+        GB_Tweak.Controls.Add(title);
+        GB_Tweak.Controls.Add(NUD_WildLevelFlat);
+        GB_Tweak.Controls.Add(flatLabel);
+        GB_Tweak.Controls.Add(NUD_WildLevelMultiplier);
+        GB_Tweak.Controls.Add(multLabel);
+        GB_Tweak.Controls.Add(CHK_WildLevelKeepRange);
+        GB_Tweak.Controls.Add(B_AdvancedWildLevels);
+
+        int required = B_AdvancedWildLevels.Bottom + 10;
+        if (GB_Tweak.Height < required)
+        {
+            int extra = required - GB_Tweak.Height;
+            GB_Tweak.Height += extra;
+            ClientSize = new System.Drawing.Size(ClientSize.Width, ClientSize.Height + extra);
+        }
+    }
+
+    private void ApplyAdvancedWildLevelScaling(object? sender, EventArgs e)
+    {
+        if (DialogResult.Yes != WinFormsUtil.Prompt(
+            MessageBoxButtons.YesNo,
+            "Apply wild level scaling?",
+            "This will modify every current wild encounter level range. Cannot undo."))
+        {
+            return;
+        }
+
+        Enabled = false;
+        int changed = 0;
+
+        for (int i = 0; i < CB_LocationID.Items.Count; i++)
+        {
+            CB_LocationID.SelectedIndex = i;
+            if (!HasData())
+                continue;
+
+            changed += ApplyAdvancedWildLevelsToCurrentLocation();
+            B_Save_Click(sender, e);
+        }
+
+        Enabled = true;
+        WinFormsUtil.Alert("Wild levels scaled!", $"Updated {changed} encounter slots.");
+    }
+
+    private int ApplyAdvancedWildLevelsToCurrentLocation()
+    {
+        int changed = 0;
+        bool keepRange = CHK_WildLevelKeepRange?.Checked ?? true;
+
+        for (int i = 0; i < All_Max.Length; i++)
+        {
+            if (All_Species[i].SelectedIndex <= 0 && All_Min[i].Value <= 0 && All_Max[i].Value <= 0)
+                continue;
+
+            int oldMin = (int)All_Min[i].Value;
+            int oldMax = (int)All_Max[i].Value;
+
+            int newMin;
+            int newMax;
+
+            if (keepRange)
+            {
+                newMin = ScaleAdvancedWildLevel(oldMin > 0 ? oldMin : oldMax);
+                newMax = ScaleAdvancedWildLevel(oldMax > 0 ? oldMax : oldMin);
+            }
+            else
+            {
+                int newLevel = ScaleAdvancedWildLevel(Math.Max(oldMin, oldMax));
+                newMin = newMax = newLevel;
+            }
+
+            if (newMax < newMin)
+                (newMin, newMax) = (newMax, newMin);
+
+            newMin = Math.Max(1, Math.Min(100, newMin));
+            newMax = Math.Max(1, Math.Min(100, newMax));
+
+            if ((int)All_Min[i].Value == newMin && (int)All_Max[i].Value == newMax)
+                continue;
+
+            All_Min[i].Value = newMin;
+            All_Max[i].Value = newMax;
+            changed++;
+        }
+
+        return changed;
+    }
+
+    private int ScaleAdvancedWildLevel(int level)
+    {
+        int flat = (int)(NUD_WildLevelFlat?.Value ?? 0);
+        decimal multiplier = (NUD_WildLevelMultiplier?.Value ?? 100) / 100m;
+        int scaled = (int)Math.Round((level * multiplier) + flat, MidpointRounding.AwayFromZero);
+        return Math.Max(1, Math.Min(100, scaled));
     }
 
     private void XYWE_FormClosing(object sender, FormClosingEventArgs e)
