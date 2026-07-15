@@ -811,9 +811,6 @@ public partial class RSTE : Form
     private static void RandomizeTeam(TrainerData6 t, MoveRandomizer move, LearnsetRandomizer learn, ushort[] itemvals, int type, bool mevo, bool typerand, int? targetLevel, bool forceExactLevel, int trainerAce, int minimumMovePower)
     {
         int last = t.Team.Length - 1;
-        var randomItemPool = mevo ? RemoveMegaStonesFromItemPool(itemvals) : itemvals;
-        if (randomItemPool.Length == 0)
-            randomItemPool = itemvals;
         for (int p = 0; p < t.Team.Length; p++)
         {
             var pk = t.Team[p];
@@ -886,7 +883,7 @@ public partial class RSTE : Form
             if (mevo && p == last && stones != null)
                 pk.Item = (ushort)stones[Rand() % stones.Length];
             else if (rItem)
-                pk.Item = randomItemPool[Rand() % randomItemPool.Length];
+                pk.Item = itemvals[Rand() % itemvals.Length];
 
             if (rForceFullyEvolved && pk.Level >= rForceFullyEvolvedLevel && !rFinalEvo.Contains(pk.Species))
             {
@@ -1122,15 +1119,6 @@ public partial class RSTE : Form
             }
     }
 
-
-    private static T[] RemoveMegaStonesFromItemPool<T>(IEnumerable<T> items)
-    {
-        if (MegaDictionary == null || MegaDictionary.Count == 0)
-            return items.ToArray();
-
-        var megaStones = MegaDictionary.Values.SelectMany(z => z).ToHashSet();
-        return items.Where(item => !megaStones.Contains(Convert.ToInt32(item))).ToArray();
-    }
     private static void RandomizeTrainerPrizeItem(TrainerData6 t)
     {
         if (rGift && Rand() % 100 < rGiftPercent)

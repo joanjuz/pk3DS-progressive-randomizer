@@ -889,35 +889,5 @@ public static class GARC
         public int HeaderSize;
         public int DataSize;
     }
-
-    private static void DeleteFileWithRetry(string path)
-    {
-        const int attempts = 30;
-        const int delayMs = 100;
-
-        for (int i = 0; i < attempts; i++)
-        {
-            try
-            {
-                if (!System.IO.File.Exists(path))
-                    return;
-
-                try { System.IO.File.SetAttributes(path, System.IO.FileAttributes.Normal); } catch { }
-                System.IO.File.Delete(path);
-                return;
-            }
-            catch (System.IO.IOException) when (i + 1 < attempts)
-            {
-                System.Threading.Thread.Sleep(delayMs);
-            }
-            catch (System.UnauthorizedAccessException) when (i + 1 < attempts)
-            {
-                System.Threading.Thread.Sleep(delayMs);
-            }
-        }
-
-        if (System.IO.File.Exists(path))
-            System.IO.File.Delete(path);
-    }
 }
 #endregion

@@ -124,7 +124,7 @@ public static class GARC
                     {
                         string old = packOrder[i];
                         LZSS.Compress(packOrder[i], packOrder[i] = Path.Combine(Path.GetDirectoryName(packOrder[i]), fileNumber.ToString()));
-                        DeleteFileWithRetry(old);
+                        File.Delete(old);
                     }
 
                     // Assemble Vector
@@ -160,7 +160,7 @@ public static class GARC
                         if (compressed >= 0)
                         {
                             LZSS.Compress(f, s = Path.Combine(Path.GetDirectoryName(f), fileNumber.ToString()));
-                            DeleteFileWithRetry(f);
+                            File.Delete(f);
                         }
 
                         // Assemble Vector
@@ -187,7 +187,7 @@ public static class GARC
         #endregion
 
         // Delete the old garc if it exists, then begin writing our new one 
-        try { DeleteFileWithRetry(garcPath); }
+        try { File.Delete(garcPath); }
         catch { }
 
         // Set up the Header Info
@@ -379,13 +379,13 @@ public static class GARC
                     try
                     {
                         LZSS.Decompress(fileOut, decout);
-                        try { DeleteFileWithRetry(fileOut); }
+                        try { File.Delete(fileOut); }
                         catch (Exception e) { throw new Exception("A compressed file could not be deleted: " + fileOut, e); }
                     }
                     catch
                     {
                         // File is really not encrypted.
-                        DeleteFileWithRetry(decout);
+                        File.Delete(decout);
                     }
                 }
                 #endregion
@@ -665,7 +665,7 @@ public static class GARC
         }
 
         byte[] GARCdata = File.ReadAllBytes(tempFile);
-        DeleteFileWithRetry(tempFile);
+        File.Delete(tempFile);
         return new MemGARC(GARCdata);
     }
 
@@ -888,36 +888,6 @@ public static class GARC
         public char[] Magic;
         public int HeaderSize;
         public int DataSize;
-    }
-
-    private static void DeleteFileWithRetry(string path)
-    {
-        const int attempts = 30;
-        const int delayMs = 100;
-
-        for (int i = 0; i < attempts; i++)
-        {
-            try
-            {
-                if (!System.IO.File.Exists(path))
-                    return;
-
-                try { System.IO.File.SetAttributes(path, System.IO.FileAttributes.Normal); } catch { }
-                System.IO.File.Delete(path);
-                return;
-            }
-            catch (System.IO.IOException) when (i + 1 < attempts)
-            {
-                System.Threading.Thread.Sleep(delayMs);
-            }
-            catch (System.UnauthorizedAccessException) when (i + 1 < attempts)
-            {
-                System.Threading.Thread.Sleep(delayMs);
-            }
-        }
-
-        if (System.IO.File.Exists(path))
-            System.IO.File.Delete(path);
     }
 }
 #endregion

@@ -304,3 +304,28 @@ MapImages/
 "*.cci",
 "*.pdb"
 ) | Add-Content .gitignore
+$ignoreLines = @(
+"publish/",
+"release_v4.3/",
+"release_v4.4/",
+"release_v4.5/",
+"release_v4.5.2/",
+"release_v4.5.4/",
+"catch_zone_templates/",
+"mapGR/",
+"encdata/",
+"mapMatrix/",
+"MapImages/",
+"*_g/",
+"*.3ds",
+"*.cia",
+"*.cxi",
+"*.cci",
+"*.pdb"
+)
+
+foreach ($line in $ignoreLines) {
+    if (!(Select-String -Path .gitignore -Pattern ([regex]::Escape($line)) -Quiet -ErrorAction SilentlyContinue)) {
+        Add-Content .gitignore $line
+    }
+}

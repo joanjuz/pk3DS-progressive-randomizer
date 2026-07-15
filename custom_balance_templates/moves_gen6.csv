@@ -3,7 +3,7 @@ Move,Power,Accuracy,PP,CriticalStage,Heal,Inflict,InflictChance,ClearStatEffects
 15,70,100,15,1,,,,,
 249,60,100,,,,,,,
 19,100,100,,,,,,,
-147,,85,,,,,,,
+147,,90,,,,,,,
 137,,90,15,,,,,,
 591,95,95,10,,,,,true,
 613,80,100,,,50,,,,
