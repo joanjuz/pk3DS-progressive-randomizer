@@ -13,7 +13,6 @@ public partial class TrainerRand : Form
     {
         InitializeComponent();
         LevelCapRules = levelCapRules?.Select(r => r.Clone()).ToList() ?? [];
-        MoveRules = TrainerMoveRule.FromLevelCapRules(LevelCapRules);
         AddProgressiveBSTControls();
         CB_Moves.SelectedIndex = 1;
         var trClassnorep = new List<string>();
@@ -210,13 +209,11 @@ public partial class TrainerRand : Form
     private Button B_SetManualBST;
     private CheckBox CHK_LevelCaps;
     private Button B_SetLevelCaps;
-    private Button B_SetTrainerMoveRules;
     private CheckBox CHK_RandomDoubleBattles;
     private NumericUpDown NUD_DoubleBattleChance;
 
     private List<ProgressiveBSTRule> ProgressiveBSTRules = GetDefaultProgressiveBSTRules();
     private List<TrainerLevelCapRule> LevelCapRules = [];
-    private List<TrainerMoveRule> MoveRules = [];
     private bool ApplyCapsToPreviousTrainers = true;
     private int PreviousTrainerGap = 2;
     private decimal RegularTrainerCurvePower = 1.6m;
@@ -247,7 +244,6 @@ public partial class TrainerRand : Form
         RSTE.rLevelCapPreviousGap = PreviousTrainerGap;
         RSTE.rLevelCapCurvePower = RegularTrainerCurvePower;
         RSTE.rLevelCapsGuaranteeMega = GuaranteeMegaInImportantBattles;
-        RSTE.rTrainerMoveRules = MoveRules.Select(r => r.Clone()).ToList();
         RSTE.rRandomDoubleBattles = CHK_RandomDoubleBattles.Checked;
         RSTE.rRandomDoubleBattleChance = (int)NUD_DoubleBattleChance.Value;
         RSTE.rNoFixedDamage = CHK_NoFixedDamage.Checked;
@@ -350,17 +346,6 @@ public partial class TrainerRand : Form
         );
     }
 
-    private void ShowTrainerMoveRulesDialog()
-    {
-        if (MoveRules.Count == 0)
-        {
-            WinFormsUtil.Alert("No important trainers were detected for this game.");
-            return;
-        }
-
-        TrainerMoveRulesDialog.Edit(this, ref MoveRules);
-    }
-
     private void AddProgressiveBSTControls()
     {
         // Hacer la ventana más ancha para que quepa el botón manual.
@@ -451,25 +436,10 @@ public partial class TrainerRand : Form
 
         B_SetLevelCaps.Click += (_, _) => ShowLevelCapDialog();
 
-        B_SetTrainerMoveRules = new Button
-        {
-            Location = new System.Drawing.Point(B_SetLevelCaps.Right + 8, CHK_Level.Top - 3),
-            Name = "B_SetTrainerMoveRules",
-            Size = new System.Drawing.Size(145, 23),
-            TabIndex = 1005,
-            Text = "Move rules",
-            UseVisualStyleBackColor = true,
-            Enabled = MoveRules.Count > 0,
-        };
-
-        B_SetTrainerMoveRules.Click += (_, _) => ShowTrainerMoveRulesDialog();
-
         Controls.Add(CHK_LevelCaps);
         Controls.Add(B_SetLevelCaps);
-        Controls.Add(B_SetTrainerMoveRules);
         CHK_LevelCaps.BringToFront();
         B_SetLevelCaps.BringToFront();
-        B_SetTrainerMoveRules.BringToFront();
 
         CHK_RandomDoubleBattles = new CheckBox
         {
@@ -513,7 +483,7 @@ public partial class TrainerRand : Form
         NUD_DoubleBattleChance.BringToFront();
         L_DoubleBattlePercent.BringToFront();
 
-        int requiredTopWidth = Math.Max(B_SetTrainerMoveRules.Right, L_DoubleBattlePercent.Right) + 16;
+        int requiredTopWidth = Math.Max(B_SetLevelCaps.Right, L_DoubleBattlePercent.Right) + 16;
         if (ClientSize.Width < requiredTopWidth)
             ClientSize = new System.Drawing.Size(requiredTopWidth, ClientSize.Height);
 

@@ -1,0 +1,215 @@
+﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Drawing;
+using System.Linq;
+using System.Windows.Forms;
+
+namespace pk3DS.WinForms;
+
+public static class TrainerMoveRulesDialog
+{
+    public static bool Edit(IWin32Window owner, ref List<TrainerMoveRule> rules)
+    {
+        using var form = new Form
+        {
+            Text = "Trainer Move Rules",
+            StartPosition = FormStartPosition.CenterParent,
+            Size = new Size(1120, 600),
+            MinimizeBox = false,
+            MaximizeBox = false,
+            FormBorderStyle = FormBorderStyle.Sizable,
+            MinimumSize = new Size(980, 520),
+        };
+
+        var editableRules = new BindingList<TrainerMoveRule>(
+            rules.Select(r => r.Clone()).ToList()
+        );
+
+        var grid = new DataGridView
+        {
+            Dock = DockStyle.Fill,
+            AutoGenerateColumns = false,
+            DataSource = editableRules,
+            AllowUserToAddRows = false,
+            AllowUserToDeleteRows = false,
+            SelectionMode = DataGridViewSelectionMode.FullRowSelect,
+            MultiSelect = true,
+            AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.None,
+        };
+
+        grid.Columns.Add(new DataGridViewCheckBoxColumn
+        {
+            DataPropertyName = nameof(TrainerMoveRule.Enabled),
+            HeaderText = "Use",
+            ToolTipText = "Enable move rules for this important trainer.",
+            Width = 45,
+        });
+
+        grid.Columns.Add(new DataGridViewTextBoxColumn
+        {
+            DataPropertyName = nameof(TrainerMoveRule.MinMovePower),
+            HeaderText = "Min Power (0=Off)",
+            ToolTipText = "Minimum power for damaging moves. 0 disables minimum power filtering.",
+            Width = 115,
+        });
+
+        grid.Columns.Add(new DataGridViewCheckBoxColumn
+        {
+            DataPropertyName = nameof(TrainerMoveRule.UseStrongestAttackStat),
+            HeaderText = "Strong Stat",
+            ToolTipText = "Choose Physical or Special moves according to the PokÃ©mon's stronger attacking stat.",
+            Width = 90,
+        });
+
+        grid.Columns.Add(new DataGridViewTextBoxColumn
+        {
+            DataPropertyName = nameof(TrainerMoveRule.MixedTolerance),
+            HeaderText = "Tolerance",
+            ToolTipText = "If Attack and Sp. Attack differ by this value or less, allow both Physical and Special moves.",
+            Width = 80,
+        });
+
+        grid.Columns.Add(new DataGridViewCheckBoxColumn
+        {
+            DataPropertyName = nameof(TrainerMoveRule.AllowStatusMoves),
+            HeaderText = "Allow Status",
+            ToolTipText = "Allow status moves. Enabled by default.",
+            Width = 95,
+        });
+
+        grid.Columns.Add(new DataGridViewTextBoxColumn
+        {
+            DataPropertyName = nameof(TrainerMoveRule.TrainerID),
+            HeaderText = "ID",
+            Width = 55,
+            ReadOnly = true,
+        });
+
+        grid.Columns.Add(new DataGridViewTextBoxColumn
+        {
+            DataPropertyName = nameof(TrainerMoveRule.Group),
+            HeaderText = "Group",
+            Width = 95,
+            ReadOnly = true,
+        });
+
+        grid.Columns.Add(new DataGridViewTextBoxColumn
+        {
+            DataPropertyName = nameof(TrainerMoveRule.Trainer),
+            HeaderText = "Trainer",
+            Width = 280,
+            ReadOnly = true,
+        });
+
+        grid.Columns.Add(new DataGridViewTextBoxColumn
+        {
+            DataPropertyName = nameof(TrainerMoveRule.CurrentAceLevel),
+            HeaderText = "Current Ace",
+            Width = 85,
+            ReadOnly = true,
+        });
+
+        grid.DataError += (_, e) => e.ThrowException = false;
+
+        var note = new Label
+        {
+            Dock = DockStyle.Bottom,
+            Height = 72,
+            TextAlign = ContentAlignment.MiddleLeft,
+            Padding = new Padding(8, 0, 8, 0),
+            Text = "Strong Stat compares base Attack vs Sp. Attack. If the difference is greater than Tolerance, the PokÃ©mon uses only Physical or Special damaging moves. If the difference is within Tolerance, both categories are allowed. Allow Status is enabled by default. Min Power 0 disables minimum power filtering.",
+        };
+
+        var buttons = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Bottom,
+            Height = 42,
+            FlowDirection = FlowDirection.RightToLeft,
+            Padding = new Padding(6),
+        };
+
+        var ok = new Button { Text = "OK", Width = 80 };
+        var cancel = new Button { Text = "Cancel", Width = 80, DialogResult = DialogResult.Cancel };
+        var selectAll = new Button { Text = "Select All", Width = 90 };
+        var selectNone = new Button { Text = "Select None", Width = 90 };
+        var allowStatusAll = new Button { Text = "Allow Status All", Width = 120 };
+
+        selectAll.Click += (_, _) => SetSelected(editableRules, true);
+        selectNone.Click += (_, _) => SetSelected(editableRules, false);
+        allowStatusAll.Click += (_, _) =>
+        {
+            foreach (var rule in editableRules)
+                rule.AllowStatusMoves = true;
+            editableRules.ResetBindings();
+        };
+
+        List<TrainerMoveRule>? acceptedRules = null;
+
+        ok.Click += (_, _) =>
+        {
+            grid.EndEdit();
+            var candidateRules = editableRules
+                .Select(r => r.Clone())
+                .OrderBy(r => r.CurrentAceLevel)
+                .ThenBy(r => r.TrainerID)
+                .ToList();
+
+            if (!Validate(candidateRules))
+                return;
+
+            acceptedRules = candidateRules;
+            form.DialogResult = DialogResult.OK;
+            form.Close();
+        };
+
+        buttons.Controls.Add(ok);
+        buttons.Controls.Add(cancel);
+        buttons.Controls.Add(allowStatusAll);
+        buttons.Controls.Add(selectNone);
+        buttons.Controls.Add(selectAll);
+
+        form.Controls.Add(grid);
+        form.Controls.Add(note);
+        form.Controls.Add(buttons);
+
+        if (form.ShowDialog(owner) != DialogResult.OK || acceptedRules is null)
+            return false;
+
+        rules = acceptedRules;
+        return true;
+    }
+
+    private static void SetSelected(BindingList<TrainerMoveRule> rules, bool value)
+    {
+        foreach (var rule in rules)
+            rule.Enabled = value;
+        rules.ResetBindings();
+    }
+
+    private static bool Validate(List<TrainerMoveRule> rules)
+    {
+        foreach (var rule in rules)
+        {
+            if (rule.MinMovePower < 0 || rule.MinMovePower > 250)
+            {
+                WinFormsUtil.Alert("Invalid minimum move power detected. Use 0 to disable it, or a value from 1 to 250.");
+                return false;
+            }
+
+            if (rule.MixedTolerance < 0 || rule.MixedTolerance > 255)
+            {
+                WinFormsUtil.Alert("Invalid tolerance detected. Use a value from 0 to 255.");
+                return false;
+            }
+        }
+
+        if (rules.GroupBy(r => r.TrainerID).Any(g => g.Count() > 1))
+        {
+            WinFormsUtil.Alert("Duplicate trainer IDs were detected in the move rules list.");
+            return false;
+        }
+
+        return true;
+    }
+}

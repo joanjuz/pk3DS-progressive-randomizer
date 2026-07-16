@@ -67,13 +67,7 @@ public static class TrainerLevelCapDialog
             ToolTipText = "Guarantee at least one Mega in this selected important battle.",
             Width = 55,
         });
-        grid.Columns.Add(new DataGridViewCheckBoxColumn
-        {
-            DataPropertyName = nameof(TrainerLevelCapRule.GuaranteeZMove),
-            HeaderText = "Z-Move",
-            ToolTipText = "Gen 7 only: guarantee one compatible Z-Crystal/Z-Move in this selected important battle.",
-            Width = 65,
-        });grid.Columns.Add(new DataGridViewTextBoxColumn
+grid.Columns.Add(new DataGridViewTextBoxColumn
         {
             DataPropertyName = nameof(TrainerLevelCapRule.TrainerID),
             HeaderText = "ID",

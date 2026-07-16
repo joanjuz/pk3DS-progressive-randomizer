@@ -67,13 +67,14 @@ public static class TrainerLevelCapDialog
             ToolTipText = "Guarantee at least one Mega in this selected important battle.",
             Width = 55,
         });
-        grid.Columns.Add(new DataGridViewCheckBoxColumn
+        grid.Columns.Add(new DataGridViewTextBoxColumn
         {
-            DataPropertyName = nameof(TrainerLevelCapRule.GuaranteeZMove),
-            HeaderText = "Z-Move",
-            ToolTipText = "Gen 7 only: guarantee one compatible Z-Crystal/Z-Move in this selected important battle.",
-            Width = 65,
-        });grid.Columns.Add(new DataGridViewTextBoxColumn
+            DataPropertyName = nameof(TrainerLevelCapRule.MinMovePower),
+            HeaderText = "Min Move Power (0=Off)",
+            ToolTipText = "Minimum move power for randomized/level-up trainer moves in this battle. 0 disables it.",
+            Width = 130,
+        });
+        grid.Columns.Add(new DataGridViewTextBoxColumn
         {
             DataPropertyName = nameof(TrainerLevelCapRule.TrainerID),
             HeaderText = "ID",
@@ -148,7 +149,7 @@ public static class TrainerLevelCapDialog
             Height = 46,
             TextAlign = ContentAlignment.MiddleLeft,
             Padding = new Padding(8, 0, 8, 0),
-            Text = "LevelCap 0 uses the trainer's current ace. Selected trainers are homogenized to the cap. Regular trainers keep the original level curve but are shifted so the trainers before the next cap approach cap - gap. Move filtering is now configured in Trainer Move Rules.",
+            Text = "LevelCap 0 uses the trainer's current ace. Selected trainers are homogenized to the cap. Regular trainers keep the original level curve but are shifted so the trainers before the next cap approach cap - gap. Min Move Power 0 disables per-trainer move filtering.",
         };
 
         var buttons = new FlowLayoutPanel
@@ -225,7 +226,13 @@ public static class TrainerLevelCapDialog
                 WinFormsUtil.Alert("Invalid level cap detected. Use 0 for the current ace level, or a value from 1 to 100.");
                 return false;
             }
-}
+
+            if (rule.MinMovePower < 0 || rule.MinMovePower > 250)
+            {
+                WinFormsUtil.Alert("Invalid minimum move power detected. Use 0 to disable it, or a value from 1 to 250.");
+                return false;
+            }
+        }
 
         if (rules.GroupBy(r => r.TrainerID).Any(g => g.Count() > 1))
         {

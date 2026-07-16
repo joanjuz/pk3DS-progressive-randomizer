@@ -1051,33 +1051,6 @@ public partial class RSTE : Form
         return eligible[(int)(Rand() % eligible.Count)];
     }
 
-
-    private static void ApplyTrainerEVOverride(object pk, TrainerMoveRule rule)
-    {
-        if (pk is null || rule is null || rule.OverrideEVs < 0)
-            return;
-        int ev = Math.Clamp(rule.OverrideEVs, 0, 252);
-        var type = pk.GetType();
-        var arrayProp = type.GetProperty("EVs");
-        if (arrayProp is not null && arrayProp.CanWrite && arrayProp.PropertyType == typeof(int[]))
-        {
-            arrayProp.SetValue(pk, Enumerable.Repeat(ev, 6).ToArray());
-            return;
-        }
-        var scalarProp = type.GetProperty("EV") ?? type.GetProperty("EVs");
-        if (scalarProp is not null && scalarProp.CanWrite && scalarProp.PropertyType != typeof(int[]))
-        {
-            scalarProp.SetValue(pk, Convert.ChangeType(ev, scalarProp.PropertyType));
-            return;
-        }
-        string[] names = ["EV_HP", "EV_ATK", "EV_DEF", "EV_SPA", "EV_SPE", "EV_SPD"];
-        foreach (string name in names)
-        {
-            var prop = type.GetProperty(name);
-            if (prop is not null && prop.CanWrite)
-                prop.SetValue(pk, Convert.ChangeType(ev, prop.PropertyType));
-        }
-    }
     private static void SetMinMaxPKM(TrainerData6 t)
     {
         int lastPKM = Math.Max(t.NumPokemon - 1, 0); // 0,1-6 => 0-5 (never is 0)

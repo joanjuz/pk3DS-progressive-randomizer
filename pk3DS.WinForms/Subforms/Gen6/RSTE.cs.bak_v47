@@ -461,7 +461,6 @@ public partial class RSTE : Form
     public static decimal rLevelCapCurvePower;
     public static List<ProgressiveBSTRule> rProgressiveBSTRules = [];
     public static List<TrainerLevelCapRule> rLevelCapRules = [];
-    public static List<TrainerMoveRule> rTrainerMoveRules = [];
     internal static bool[] rThemedClasses = [];
     private static string[] rTags;
     private static int[] megaEvos;
@@ -532,7 +531,6 @@ public partial class RSTE : Form
         rLevelCapCurvePower = 1.6m;
         rProgressiveBSTRules = [];
         rLevelCapRules = [];
-        rTrainerMoveRules = [];
 
         rGiftPercent = 0;
         rForceFullyEvolvedLevel = 0;
@@ -641,14 +639,14 @@ public partial class RSTE : Form
             int trainerAce = GetAceLevel(t);
             bool mevo = ShouldGuaranteeMega(i, trainerAce, levelCapStages);
             int? targetLevel = GetTrainerTargetLevel(i, trainerAce, levelCapStages, out bool forceExactLevel);
-            var moveRule = GetTrainerMoveRule(i);
+            int minimumMovePower = GetTrainerMinimumMovePower(i, levelCapStages);
 
             SetMinMaxPKM(t);
             SetFullParties(t, rImportant[i] == null);
             ApplyRandomDoubleBattle(t, trainerAce);
             RandomizeTrainerAIClass(t, trClass);
             RandomizeTrainerPrizeItem(t);
-            RandomizeTeam(t, move, learn, itemvals, type, mevo, typerand, targetLevel, forceExactLevel, trainerAce, moveRule);
+            RandomizeTeam(t, move, learn, itemvals, type, mevo, typerand, targetLevel, forceExactLevel, trainerAce, minimumMovePower);
 
             trdata[i] = t.Write();
             trpoke[i] = t.WriteTeam();
@@ -737,10 +735,10 @@ public partial class RSTE : Form
         return stages.Any(s => s.TrainerID == trainerID && s.GuaranteeMega);
     }
 
-    private static TrainerMoveRule GetTrainerMoveRule(int trainerID)
+    private static int GetTrainerMinimumMovePower(int trainerID, List<TrainerLevelCapStage> stages)
     {
-        var rule = rTrainerMoveRules?.FirstOrDefault(r => r.Enabled && r.TrainerID == trainerID);
-        return rule?.Clone();
+        var stage = stages.FirstOrDefault(s => s.TrainerID == trainerID);
+        return stage is null ? 0 : ClampMovePower(stage.MinMovePower);
     }
 
     private static int ClampMovePower(int power)
@@ -810,7 +808,7 @@ public partial class RSTE : Form
             rule.MaxBST
         );
     }
-    private static void RandomizeTeam(TrainerData6 t, MoveRandomizer move, LearnsetRandomizer learn, ushort[] itemvals, int type, bool mevo, bool typerand, int? targetLevel, bool forceExactLevel, int trainerAce, TrainerMoveRule moveRule)
+    private static void RandomizeTeam(TrainerData6 t, MoveRandomizer move, LearnsetRandomizer learn, ushort[] itemvals, int type, bool mevo, bool typerand, int? targetLevel, bool forceExactLevel, int trainerAce, int minimumMovePower)
     {
         int last = t.Team.Length - 1;
         var randomItemPool = mevo ? RemoveMegaStonesFromItemPool(itemvals) : itemvals;
@@ -930,36 +928,31 @@ public partial class RSTE : Form
                     pk.Moves[m] = (ushort)pkMoves[m];
             }
 
-            if (ShouldApplyMoveRule(moveRule) && !rMetronome)
+            if (minimumMovePower > 0 && !rMetronome)
             {
                 t.Moves = true;
-                var pkMoves = ApplyTrainerMoveRule(pk.Moves.Select(z => (int)z).ToArray(), pk.Species, moveRule, move);
+                var pkMoves = EnsureMinimumMovePower(pk.Moves.Select(z => (int)z).ToArray(), pk.Species, minimumMovePower, move);
                 for (int m = 0; m < 4; m++)
                     pk.Moves[m] = (ushort)pkMoves[m];
             }
         }
     }
 
-    private static bool ShouldApplyMoveRule(TrainerMoveRule rule)
+    private static int[] EnsureMinimumMovePower(int[] moves, int species, int minimumPower, MoveRandomizer move)
     {
-        return rule is not null && (rule.MinMovePower > 0 || rule.UseStrongestAttackStat || !rule.AllowStatusMoves);
-    }
-
-    private static int[] ApplyTrainerMoveRule(int[] moves, int species, TrainerMoveRule rule, MoveRandomizer move)
-    {
-        if (!ShouldApplyMoveRule(rule))
+        minimumPower = ClampMovePower(minimumPower);
+        if (minimumPower <= 0)
             return moves;
 
         var result = moves.ToArray();
         var used = new HashSet<int>(result.Where(z => z > 0));
-
         for (int i = 0; i < result.Length; i++)
         {
             int moveID = result[i];
-            if (IsMoveAllowedByTrainerRule(moveID, species, rule, move, true, true))
+            if (IsMoveMeetingMinimumPower(moveID, minimumPower, move))
                 continue;
 
-            int replacement = GetRandomMoveByTrainerRule(species, rule, used, move);
+            int replacement = GetRandomMoveWithMinimumPower(species, minimumPower, used, move);
             if (replacement <= 0)
                 continue;
 
@@ -971,7 +964,7 @@ public partial class RSTE : Form
         return result;
     }
 
-    private static bool IsMoveAllowedByTrainerRule(int moveID, int species, TrainerMoveRule rule, MoveRandomizer move, bool enforcePower, bool enforceCategory)
+    private static bool IsMoveMeetingMinimumPower(int moveID, int minimumPower, MoveRandomizer move)
     {
         if (moveID <= 0 || moveID >= Main.Config.Moves.Length)
             return false;
@@ -980,65 +973,17 @@ public partial class RSTE : Form
             return false;
 
         var data = Main.Config.Moves[moveID];
-
-        if (data.Category == 0)
-            return rule.AllowStatusMoves;
-
-        if (enforcePower && rule.MinMovePower > 0 && data.Power < ClampMovePower(rule.MinMovePower))
-            return false;
-
-        if (enforceCategory && rule.UseStrongestAttackStat)
-        {
-            int preferred = GetPreferredMoveCategory(species, rule.MixedTolerance);
-            if (preferred != 0 && data.Category != preferred)
-                return false;
-        }
-
-        return true;
+        return data.Category != 0 && data.Power >= minimumPower;
     }
 
-    private static int GetPreferredMoveCategory(int species, int tolerance)
-    {
-        if (species <= 0 || species >= Main.SpeciesStat.Length)
-            return 0;
-
-        var p = Main.SpeciesStat[species];
-        int delta = p.ATK - p.SPA;
-        int tol = Math.Max(0, tolerance);
-
-        if (delta > tol)
-            return 1; // Physical
-        if (-delta > tol)
-            return 2; // Special
-
-        return 0; // Mixed: allow Physical and Special
-    }
-
-    private static int GetRandomMoveByTrainerRule(int species, TrainerMoveRule rule, HashSet<int> used, MoveRandomizer move)
-    {
-        int replacement = GetRandomMoveByTrainerRule(species, rule, used, move, true, true);
-        if (replacement > 0)
-            return replacement;
-
-        replacement = GetRandomMoveByTrainerRule(species, rule, used, move, false, true);
-        if (replacement > 0)
-            return replacement;
-
-        replacement = GetRandomMoveByTrainerRule(species, rule, used, move, true, false);
-        if (replacement > 0)
-            return replacement;
-
-        return GetRandomMoveByTrainerRule(species, rule, used, move, false, false);
-    }
-
-    private static int GetRandomMoveByTrainerRule(int species, TrainerMoveRule rule, HashSet<int> used, MoveRandomizer move, bool enforcePower, bool enforceCategory)
+    private static int GetRandomMoveWithMinimumPower(int species, int minimumPower, HashSet<int> used, MoveRandomizer move)
     {
         int maxMove = Math.Min(Main.Config.Info.MaxMoveID, Main.Config.Moves.Length);
         int[] types = Main.SpeciesStat[species].Types;
 
         var eligible = Enumerable.Range(1, maxMove - 1)
             .Where(m => !used.Contains(m))
-            .Where(m => IsMoveAllowedByTrainerRule(m, species, rule, move, enforcePower, enforceCategory))
+            .Where(m => IsMoveMeetingMinimumPower(m, minimumPower, move))
             .ToList();
 
         if (eligible.Count == 0)
@@ -1051,33 +996,6 @@ public partial class RSTE : Form
         return eligible[(int)(Rand() % eligible.Count)];
     }
 
-
-    private static void ApplyTrainerEVOverride(object pk, TrainerMoveRule rule)
-    {
-        if (pk is null || rule is null || rule.OverrideEVs < 0)
-            return;
-        int ev = Math.Clamp(rule.OverrideEVs, 0, 252);
-        var type = pk.GetType();
-        var arrayProp = type.GetProperty("EVs");
-        if (arrayProp is not null && arrayProp.CanWrite && arrayProp.PropertyType == typeof(int[]))
-        {
-            arrayProp.SetValue(pk, Enumerable.Repeat(ev, 6).ToArray());
-            return;
-        }
-        var scalarProp = type.GetProperty("EV") ?? type.GetProperty("EVs");
-        if (scalarProp is not null && scalarProp.CanWrite && scalarProp.PropertyType != typeof(int[]))
-        {
-            scalarProp.SetValue(pk, Convert.ChangeType(ev, scalarProp.PropertyType));
-            return;
-        }
-        string[] names = ["EV_HP", "EV_ATK", "EV_DEF", "EV_SPA", "EV_SPE", "EV_SPD"];
-        foreach (string name in names)
-        {
-            var prop = type.GetProperty(name);
-            if (prop is not null && prop.CanWrite)
-                prop.SetValue(pk, Convert.ChangeType(ev, prop.PropertyType));
-        }
-    }
     private static void SetMinMaxPKM(TrainerData6 t)
     {
         int lastPKM = Math.Max(t.NumPokemon - 1, 0); // 0,1-6 => 0-5 (never is 0)
