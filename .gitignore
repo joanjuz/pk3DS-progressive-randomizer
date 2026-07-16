@@ -328,4 +328,4 @@ foreach ($line in $ignoreLines) {
     if (!(Select-String -Path .gitignore -Pattern ([regex]::Escape($line)) -Quiet -ErrorAction SilentlyContinue)) {
         Add-Content .gitignore $line
     }
-}
+}*.bak_v*
