@@ -1348,7 +1348,7 @@ public partial class SMTE : Form
                     pk.Moves = learn.GetHighPoweredMoves(pk.Species, pk.Form, 4);
 
                 if (ShouldApplyMoveRule(moveRule) && CB_Moves.SelectedIndex != 3)
-                    pk.Moves = ApplyTrainerMoveRule(pk.Moves, pk.Species, moveRule, move);
+                    pk.Moves = ApplyTrainerMoveRule(pk.Moves, pk.Species, moveRule, move, move.rDMG ? move.rDMGCount : 0);
 
                 if (forceZMove && p == zMoveSlot)
                     EnsureZMove(pk, move);
@@ -1370,7 +1370,7 @@ public partial class SMTE : Form
         return rule is not null && (rule.MinMovePower > 0 || rule.UseStrongestAttackStat || !rule.AllowStatusMoves);
     }
 
-    private static int[] ApplyTrainerMoveRule(int[] moves, int species, TrainerMoveRule rule, MoveRandomizer move)
+    private static int[] ApplyTrainerMoveRule(int[] moves, int species, TrainerMoveRule rule, MoveRandomizer move, int minimumDamagingMoves = 0)
     {
         if (!ShouldApplyMoveRule(rule))
             return moves;
@@ -1392,10 +1392,89 @@ public partial class SMTE : Form
             used.Add(replacement);
             result[i] = replacement;
         }
+        return EnsureMinimumDamagingMovesByTrainerRule(result, species, rule, move, minimumDamagingMoves);
+    }
+
+    private static int[] EnsureMinimumDamagingMovesByTrainerRule(int[] moves, int species, TrainerMoveRule rule, MoveRandomizer move, int minimumDamagingMoves)
+    {
+        if (minimumDamagingMoves <= 0)
+            return moves;
+
+        var result = moves.ToArray();
+        int required = Math.Clamp(minimumDamagingMoves, 0, result.Length);
+
+        int current = result.Count(m => IsDamagingMoveAllowedByTrainerRule(m, species, rule, move, true, true));
+        if (current >= required)
+            return result;
+
+        var used = new HashSet<int>(result.Where(z => z > 0));
+
+        for (int i = 0; i < result.Length && current < required; i++)
+        {
+            int moveID = result[i];
+            if (IsDamagingMoveAllowedByTrainerRule(moveID, species, rule, move, true, true))
+                continue;
+
+            int replacement = GetRandomDamagingMoveByTrainerRule(species, rule, used, move);
+            if (replacement <= 0)
+                continue;
+
+            used.Remove(moveID);
+            used.Add(replacement);
+            result[i] = replacement;
+            current++;
+        }
 
         return result;
     }
 
+    private static bool IsDamagingMoveAllowedByTrainerRule(int moveID, int species, TrainerMoveRule rule, MoveRandomizer move, bool enforcePower, bool enforceCategory)
+    {
+        if (!IsMoveAllowedByTrainerRule(moveID, species, rule, move, enforcePower, enforceCategory))
+            return false;
+
+        var data = Main.Config.Moves[moveID];
+        return data.Category != 0 && data.Power > 0;
+    }
+
+    private static int GetRandomDamagingMoveByTrainerRule(int species, TrainerMoveRule rule, HashSet<int> used, MoveRandomizer move)
+    {
+        int replacement = GetRandomDamagingMoveByTrainerRule(species, rule, used, move, true, true);
+        if (replacement > 0)
+            return replacement;
+
+        replacement = GetRandomDamagingMoveByTrainerRule(species, rule, used, move, false, true);
+        if (replacement > 0)
+            return replacement;
+
+        replacement = GetRandomDamagingMoveByTrainerRule(species, rule, used, move, true, false);
+        if (replacement > 0)
+            return replacement;
+
+        return GetRandomDamagingMoveByTrainerRule(species, rule, used, move, false, false);
+    }
+
+    private static int GetRandomDamagingMoveByTrainerRule(int species, TrainerMoveRule rule, HashSet<int> used, MoveRandomizer move, bool enforcePower, bool enforceCategory)
+    {
+        int maxMove = Math.Min(Main.Config.Info.MaxMoveID, Main.Config.Moves.Length);
+        int[] types = species > 0 && species < Main.SpeciesStat.Length
+            ? Main.SpeciesStat[species].Types
+            : [];
+
+        var eligible = Enumerable.Range(1, maxMove - 1)
+            .Where(m => !used.Contains(m))
+            .Where(m => IsDamagingMoveAllowedByTrainerRule(m, species, rule, move, enforcePower, enforceCategory))
+            .ToList();
+
+        if (eligible.Count == 0)
+            return 0;
+
+        var stab = eligible.Where(m => types.Contains(Main.Config.Moves[m].Type)).ToList();
+        if (move.rSTAB && stab.Count > 0)
+            return stab[(int)(Util.Random32() % stab.Count)];
+
+        return eligible[(int)(Util.Random32() % eligible.Count)];
+    }
     private static bool IsMoveAllowedByTrainerRule(int moveID, int species, TrainerMoveRule rule, MoveRandomizer move, bool enforcePower, bool enforceCategory)
     {
         if (moveID <= 0 || moveID >= Main.Config.Moves.Length)
