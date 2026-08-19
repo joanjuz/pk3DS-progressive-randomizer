@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 namespace pk3DS.WinForms;
 
@@ -22,6 +22,11 @@ public sealed class TrainerMoveRule
     // Enabled by default. If disabled, status moves are filtered out.
     public bool AllowStatusMoves { get; set; } = true;
 
+    // Force Better Movesets for this trainer even when the global Better Movesets checkbox is disabled.
+    public bool BetterMovesets { get; set; } = true;
+
+    // Give this trainer competitive/smart held items after its final moveset is generated.
+    public bool SmartItems { get; set; } = true;
     // -1 means disabled. If set, all EV stats for every PokÃ©mon in this trainer battle use this value when supported.
     public int OverrideEVs { get; set; } = -1;
 
@@ -38,6 +43,8 @@ public sealed class TrainerMoveRule
             UseStrongestAttackStat = UseStrongestAttackStat,
             MixedTolerance = MixedTolerance,
             AllowStatusMoves = AllowStatusMoves,
+            BetterMovesets = BetterMovesets,
+            SmartItems = SmartItems,
             OverrideEVs = OverrideEVs,
         };
     }
@@ -55,6 +62,8 @@ public sealed class TrainerMoveRule
             UseStrongestAttackStat = false,
             MixedTolerance = 15,
             AllowStatusMoves = true,
+            BetterMovesets = true,
+            SmartItems = true,
             OverrideEVs = -1,
         })
         .OrderBy(r => r.CurrentAceLevel)

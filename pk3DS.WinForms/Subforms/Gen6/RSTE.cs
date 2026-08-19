@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -14,6 +14,8 @@ namespace pk3DS.WinForms;
 
 public partial class RSTE : Form
 {
+    private static CheckBox CHK_SmartHeldItems;
+    private static ComboBox CB_SmartHeldItemMode;
     private readonly LearnsetRandomizer learn = new(Main.Config, Main.Config.Learnsets);
 
     public RSTE(byte[][] trd, byte[][] trp)
@@ -27,6 +29,8 @@ public partial class RSTE : Form
         rFinalEvo = Legal.FinalEvolutions_6;
 
         InitializeComponent();
+        TrainerHeldItemTemplate.EnsureDefaultFile();
+        TrainerBetterMovesetTemplate.EnsureDefaultFile();
         // String Fetching
         #region Combo Box Arrays
         trpk_pkm = [CB_Pokemon_1_Pokemon, CB_Pokemon_2_Pokemon, CB_Pokemon_3_Pokemon, CB_Pokemon_4_Pokemon, CB_Pokemon_5_Pokemon, CB_Pokemon_6_Pokemon,
@@ -62,6 +66,58 @@ public partial class RSTE : Form
     private bool start = true;
     private bool loading = true;
     private int index = -1;
+
+    private void AddSmartHeldItemControls()
+    {
+        try
+        {
+            if (CHK_SmartHeldItems is null)
+            {
+                CHK_SmartHeldItems = new CheckBox
+                {
+                    Name = "CHK_SmartHeldItems",
+                    Text = "Smart Items",
+                    AutoSize = true,
+                    Checked = false,
+                };
+            }
+
+            if (CB_SmartHeldItemMode is null)
+            {
+                CB_SmartHeldItemMode = new ComboBox
+                {
+                    Name = "CB_SmartHeldItemMode",
+                    DropDownStyle = ComboBoxStyle.DropDownList,
+                    Width = 95,
+                };
+
+                CB_SmartHeldItemMode.Items.AddRange(new object[] { "Normal", "Strong", "Competitive" });
+                CB_SmartHeldItemMode.SelectedIndex = 1;
+            }
+
+            var randomItems = Controls.Find("CHK_RandomItems", true).FirstOrDefault() as CheckBox;
+            Control parent = randomItems?.Parent ?? this;
+
+            if (!parent.Controls.Contains(CHK_SmartHeldItems))
+                parent.Controls.Add(CHK_SmartHeldItems);
+
+            if (!parent.Controls.Contains(CB_SmartHeldItemMode))
+                parent.Controls.Add(CB_SmartHeldItemMode);
+
+            int x = randomItems is not null ? randomItems.Left : 6;
+            int y = randomItems is not null ? randomItems.Bottom + 5 : 120;
+
+            CHK_SmartHeldItems.Location = new Point(x, y);
+            CB_SmartHeldItemMode.Location = new Point(x + 105, y - 2);
+
+            CHK_SmartHeldItems.BringToFront();
+            CB_SmartHeldItemMode.BringToFront();
+        }
+        catch
+        {
+            // UI-only helper. Do not block the editor if a different build moves controls around.
+        }
+    }
     #region Global Variables
     private readonly ComboBox[] trpk_pkm;
     private readonly ComboBox[] trpk_lvl;
@@ -451,9 +507,15 @@ public partial class RSTE : Form
 
     public static bool rPKM, rSmart, rProgressiveBST, rLevel, rMove, rMetronome, rNoMove, rForceHighPower, rAbility, rDiffAI,
     rDiffIV, rClass, rGift, rItem, rDoRand, rRandomMegas, rGymE4Only,
-    rTypeTheme, rTypeGymTrainers, rOnlySingles, rDMG, rSTAB, r6PKM, rForceFullyEvolved;
+    rTypeTheme, rTypeGymTrainers, rOnlySingles, rDMG, rSTAB, r6PKM, rForceFullyEvolved, rBetterMovesets;
 
     public static bool rNoFixedDamage;
+    public static bool rBanBadTrainerItems;
+    public static bool rItemClause;
+    public static bool rSmartTrainerItems; // legacy/global disabled in v4.9.4
+    public static int rSmartTrainerItemMode = 1;
+    public static TrainerHeldItemTemplate rTrainerHeldItemTemplate;
+    public static TrainerBetterMovesetTemplate rTrainerBetterMovesetTemplate;
     public static bool rUseLevelCaps, rLevelCapsApplyPrevious, rLevelCapsGuaranteeMega;
     public static bool rRandomDoubleBattles;
     public static int rRandomDoubleBattleChance;
@@ -528,6 +590,13 @@ public partial class RSTE : Form
         rPKM = rMove = rMetronome = rAbility = rDiffAI = rDiffIV = rClass = rGift = rItem = rDoRand = false;
         rSmart = rProgressiveBST = false;
         rUseLevelCaps = rLevelCapsApplyPrevious = rLevelCapsGuaranteeMega = false;
+        rBanBadTrainerItems = false;
+        rItemClause = false;
+        rBetterMovesets = false;
+        rSmartTrainerItems = false;
+        rSmartTrainerItemMode = 1;
+        rTrainerHeldItemTemplate = null;
+        rTrainerBetterMovesetTemplate = null;
         rLevelCapPreviousGap = 2;
         rLevelCapCurvePower = 1.6m;
         rProgressiveBSTRules = [];
@@ -619,7 +688,52 @@ public partial class RSTE : Form
         ushort[] itemvals = Main.Config.ORAS ? Legal.Pouch_Items_AO : Legal.Pouch_Items_XY;
         itemvals = [.. itemvals, .. Legal.Pouch_Berry_XY];
 
+        if (rBanBadTrainerItems)
+        {
+            ushort[] cleanItemPool = SmartTrainerItemPicker
+                .GetBanBadItemPool(itemvals.Select(z => (int)z))
+                .Select(z => (ushort)z)
+                .ToArray();
+
+            if (cleanItemPool.Length > 0)
+                itemvals = cleanItemPool;
+        }
+
+        itemvals = SmartTrainerItemPicker
+            .AddSmartTrainerItemPoolExtras(itemvals.Select(z => (int)z))
+            .Select(z => (ushort)z)
+            .ToArray();
+
+        rSmartTrainerItems = CHK_SmartHeldItems?.Checked ?? false;
+        rSmartTrainerItemMode = CB_SmartHeldItemMode?.SelectedIndex ?? 1;
+        rTrainerHeldItemTemplate = rItem
+            ? TrainerHeldItemTemplate.LoadOrCreateDefault(itemlist, itemvals.Select(z => (int)z))
+            : null;
+
+        if (rTrainerHeldItemTemplate is not null && rTrainerHeldItemTemplate.Warnings.Count > 0)
+        {
+            WinFormsUtil.Alert(
+                string.Join(Environment.NewLine, rTrainerHeldItemTemplate.Warnings.Take(8)),
+                $"Held item template loaded with {rTrainerHeldItemTemplate.Warnings.Count} warning(s)."
+            );
+        }
+
+        rTrainerBetterMovesetTemplate = rBetterMovesets
+            ? TrainerBetterMovesetTemplate.LoadOrCreateDefault()
+            : null;
+
+        if (rTrainerBetterMovesetTemplate is not null && rTrainerBetterMovesetTemplate.Warnings.Count > 0)
+        {
+            WinFormsUtil.Alert(
+                string.Join(Environment.NewLine, rTrainerBetterMovesetTemplate.Warnings.Take(8)),
+                $"Better moveset template loaded with {rTrainerBetterMovesetTemplate.Warnings.Count} warning(s)."
+            );
+        }
+
         var levelCapStages = BuildLevelCapStages();
+
+        int progressTotal = Math.Max(1, CB_TrainerID.Items.Count - 1);
+        using var progress = TrainerRandomizeProgress.Show(this, "Randomizing Trainers", progressTotal);
 
         for (int i = 1; i < CB_TrainerID.Items.Count; i++)
         {
@@ -638,6 +752,8 @@ public partial class RSTE : Form
                 Item = rItem || checkBox_Item.Checked,
             };
 
+            progress.Report(i, progressTotal, GetTrainerDisplayName(i, t.Class));
+
             int trainerAce = GetAceLevel(t);
             bool mevo = ShouldGuaranteeMega(i, trainerAce, levelCapStages);
             int? targetLevel = GetTrainerTargetLevel(i, trainerAce, levelCapStages, out bool forceExactLevel);
@@ -648,13 +764,120 @@ public partial class RSTE : Form
             ApplyRandomDoubleBattle(t, trainerAce);
             RandomizeTrainerAIClass(t, trClass);
             RandomizeTrainerPrizeItem(t);
-            RandomizeTeam(t, move, learn, itemvals, type, mevo, typerand, targetLevel, forceExactLevel, trainerAce, moveRule);
+            string trainerGroup = i < rImportant.Length ? rImportant[i] ?? string.Empty : string.Empty;
+            bool isImportantTrainer = !string.IsNullOrWhiteSpace(trainerGroup);
+
+            RandomizeTeam(t, move, learn, itemvals, type, mevo, typerand, targetLevel, forceExactLevel, trainerAce, moveRule, i, trainerGroup, isImportantTrainer);
+
+            // Final per-trainer Smart Items pass.
+            // Runs once after moves are finalized so held items match the final moveset.
+            ApplySmartTrainerItemsToTrainer(t, itemvals, mevo, moveRule);
 
             trdata[i] = t.Write();
             trpoke[i] = t.WriteTeam();
         }
         CB_TrainerID.SelectedIndex = 1;
-        WinFormsUtil.Alert("Randomized all Trainers according to specification!", "Press the Dump to .TXT button to view the new Trainer information!");
+        WinFormsUtil.Alert("Randomized all Trainers according to specification!", "Smart Items were applied only to Use-checked Move Rules trainers. Ban Bad Items applies to the regular random item pool when enabled.");
+    }
+
+
+    private static void ApplySmartTrainerItemsToTrainer(TrainerData6 trainer, ushort[] itemvals, bool mevo, TrainerMoveRule moveRule)
+    {
+        if (rTrainerHeldItemTemplate is not null)
+            return;
+
+        // v4.9.5 overload for per-trainer Smart Items from Trainer Move Rules.
+        // Trainers need Use checked and Smart Items checked.
+        if (!rItem || moveRule is null || !moveRule.Enabled || !moveRule.SmartItems || trainer?.Team is null || trainer.Team.Length == 0)
+            return;
+
+        trainer.Item = true;
+
+        int last = trainer.Team.Length - 1;
+        var smartPool = mevo ? RemoveMegaStonesFromItemPool(itemvals) : itemvals;
+        if (smartPool.Length == 0)
+            smartPool = itemvals;
+
+        var usedItems = rItemClause
+            ? trainer.Team.Select(pk => (int)pk.Item).Where(item => item > 0).ToHashSet()
+            : null;
+
+        for (int p = 0; p < trainer.Team.Length; p++)
+        {
+            // Preserve the forced Mega stone.
+            if (mevo && p == last)
+                continue;
+
+            var pk = trainer.Team[p];
+            if (pk is null || pk.Species <= 0)
+                continue;
+
+            if (usedItems is not null)
+                usedItems.Remove(pk.Item);
+
+            int[] slotPool = ApplyItemClauseToPool(smartPool.Select(z => (int)z), usedItems);
+            int smartItem = SmartTrainerItemPicker.Pick(
+                pk.Species,
+                pk.Form,
+                pk.Level,
+                pk.Moves.Select(z => (int)z),
+                slotPool,
+                pk.Ability,
+                rFinalEvo != null && rFinalEvo.Contains(pk.Species),
+                2
+            );
+
+            pk.Item = (ushort)Math.Max(0, smartItem);
+            TrackItemClause(pk.Item, usedItems);
+        }
+    }
+    private static void ApplySmartTrainerItemsToTrainer(TrainerData6 trainer, ushort[] itemvals, bool mevo)
+    {
+        if (rTrainerHeldItemTemplate is not null)
+            return;
+
+        if (!rItem || trainer?.Team is null || trainer.Team.Length == 0)
+            return;
+
+        trainer.Item = true;
+
+        int last = trainer.Team.Length - 1;
+        var smartPool = mevo ? RemoveMegaStonesFromItemPool(itemvals) : itemvals;
+        if (smartPool.Length == 0)
+            smartPool = itemvals;
+
+        var usedItems = rItemClause
+            ? trainer.Team.Select(pk => (int)pk.Item).Where(item => item > 0).ToHashSet()
+            : null;
+
+        for (int p = 0; p < trainer.Team.Length; p++)
+        {
+            // Preserve the forced Mega stone.
+            if (mevo && p == last)
+                continue;
+
+            var pk = trainer.Team[p];
+            if (pk is null || pk.Species <= 0)
+                continue;
+
+            if (usedItems is not null)
+                usedItems.Remove(pk.Item);
+
+            int[] slotPool = ApplyItemClauseToPool(smartPool.Select(z => (int)z), usedItems);
+            int smartItem = SmartTrainerItemPicker.Pick(
+                pk.Species,
+                pk.Form,
+                pk.Level,
+                pk.Moves.Select(z => (int)z),
+                slotPool,
+                pk.Ability,
+                rFinalEvo != null && rFinalEvo.Contains(pk.Species),
+                rSmartTrainerItemMode
+            );
+
+            pk.Item = (ushort)Math.Max(0, smartItem);
+            TrackItemClause(pk.Item, usedItems);
+        }
     }
     private List<TrainerLevelCapStage> BuildLevelCapStages()
     {
@@ -810,16 +1033,18 @@ public partial class RSTE : Form
             rule.MaxBST
         );
     }
-    private static void RandomizeTeam(TrainerData6 t, MoveRandomizer move, LearnsetRandomizer learn, ushort[] itemvals, int type, bool mevo, bool typerand, int? targetLevel, bool forceExactLevel, int trainerAce, TrainerMoveRule moveRule)
+    private static void RandomizeTeam(TrainerData6 t, MoveRandomizer move, LearnsetRandomizer learn, ushort[] itemvals, int type, bool mevo, bool typerand, int? targetLevel, bool forceExactLevel, int trainerAce, TrainerMoveRule moveRule, int trainerID, string trainerGroup, bool isImportantTrainer)
     {
         int last = t.Team.Length - 1;
         var randomItemPool = mevo ? RemoveMegaStonesFromItemPool(itemvals) : itemvals;
         if (randomItemPool.Length == 0)
             randomItemPool = itemvals;
+        var usedHeldItems = rItemClause ? new HashSet<int>() : null;
         for (int p = 0; p < t.Team.Length; p++)
         {
             var pk = t.Team[p];
             int[] stones = null;
+            int[] slotItemPool = ApplyItemClauseToPool(randomItemPool.Select(z => (int)z), usedHeldItems);
 
             if (targetLevel is not null)
                 pk.Level = ApplyLevelTarget(pk.Level, targetLevel, forceExactLevel, trainerAce);
@@ -834,8 +1059,7 @@ public partial class RSTE : Form
                 {
                     if (rProgressiveBST)
                     {
-
-                        species = GetProgressiveRandomSpecies(pk.Species, type, pk.Level);
+                        species = GetProgressiveRandomSpecies(pk.Species, -1, pk.Level);
                     }
                     else
                     {
@@ -849,6 +1073,7 @@ public partial class RSTE : Form
                         while (Main.Config.Personal[species].Types.All(z => z != type) && tries++ < 100);
                     }
                 }
+                //
                 else if (p == last && mevo)
                 {
                     stones = GetRandomMega(out species);
@@ -859,14 +1084,14 @@ public partial class RSTE : Form
                     {
                         var range = SpeciesRandomizer.GetProgressiveBSTRange(pk.Level);
 
-                        species = GetProgressiveRandomSpecies(pk.Species, type, pk.Level);
+                        species = GetProgressiveRandomSpecies(pk.Species, -1, pk.Level);
                     }
                     else
                     {
                         species = rSpeciesRand.GetRandomSpecies(pk.Species);
                     }
                 }
-
+//
                 pk.Species = (ushort)species;
                 pk.Gender = 0; // Set Gender to Random
                 bool mega = rRandomMegas && !(mevo && p == last); // except if mega evolution is forced for the last slot
@@ -887,8 +1112,8 @@ public partial class RSTE : Form
 
             if (mevo && p == last && stones != null)
                 pk.Item = (ushort)stones[Rand() % stones.Length];
-            else if (rItem)
-                pk.Item = randomItemPool[Rand() % randomItemPool.Length];
+            else if (rItem && rTrainerHeldItemTemplate is null && !rSmartTrainerItems)
+                pk.Item = (ushort)slotItemPool[Rand() % slotItemPool.Length];
 
             if (rForceFullyEvolved && pk.Level >= rForceFullyEvolvedLevel && !rFinalEvo.Contains(pk.Species))
             {
@@ -930,6 +1155,27 @@ public partial class RSTE : Form
                     pk.Moves[m] = (ushort)pkMoves[m];
             }
 
+            if (ShouldUseBetterMoveset(moveRule, trainerID, isImportantTrainer, trainerGroup, pk.Level) && !rMetronome)
+            {
+                t.Moves = true;
+                int teamWeatherMask = GetTeamWeatherSupportMask(t);
+                var pkMoves = SmartTrainerMovePicker.PickBetterMoveset(
+                    pk.Species,
+                    pk.Form,
+                    pk.Level,
+                    pk.Moves.Select(z => (int)z),
+                    move,
+                    learn,
+                    moveRule,
+                    move.rDMG ? move.rDMGCount : 0,
+                    pk.Ability,
+                    6,
+                    teamWeatherMask
+                );
+                for (int m = 0; m < 4; m++)
+                    pk.Moves[m] = (ushort)pkMoves[m];
+            }
+
             if (ShouldApplyMoveRule(moveRule) && !rMetronome)
             {
                 t.Moves = true;
@@ -937,7 +1183,85 @@ public partial class RSTE : Form
                 for (int m = 0; m < 4; m++)
                     pk.Moves[m] = (ushort)pkMoves[m];
             }
+            // v4.8.8 final Smart Held Items pass.
+            // This must run after moves are finalized so items can match the final moveset.
+            if (rItem && rTrainerHeldItemTemplate is null && rSmartTrainerItems && !(mevo && p == last))
+            {
+                int smartItem = SmartTrainerItemPicker.Pick(
+                    pk.Species,
+                    pk.Form,
+                    pk.Level,
+                    pk.Moves.Select(z => (int)z),
+                    slotItemPool,
+                    pk.Ability,
+                    rFinalEvo is not null && rFinalEvo.Contains(pk.Species),
+                    rSmartTrainerItemMode
+                );
+
+                pk.Item = (ushort)Math.Max(0, smartItem);
+            }
+
+            if (rItem && rTrainerHeldItemTemplate is not null && !(mevo && p == last))
+            {
+                int templateItem = rTrainerHeldItemTemplate.PickItem(
+                    trainerID,
+                    isImportantTrainer,
+                    trainerGroup,
+                    pk.Item,
+                    pk.Species,
+                    pk.Form,
+                    pk.Level,
+                    pk.Moves.Select(z => (int)z),
+                    slotItemPool,
+                    pk.Ability,
+                    rFinalEvo is not null && rFinalEvo.Contains(pk.Species),
+                    rSmartTrainerItemMode,
+                    usedHeldItems
+                );
+
+                pk.Item = (ushort)Math.Max(0, templateItem);
+            }
+
+            if (!(mevo && p == last))
+                TrackItemClause(pk.Item, usedHeldItems);
         }
+    }
+
+    private static int GetTeamWeatherSupportMask(TrainerData6 t)
+    {
+        int mask = 0;
+        foreach (var ally in t.Team)
+            mask |= SmartTrainerMovePicker.GetWeatherAbilityMask(ally.Species, ally.Ability);
+        return mask;
+    }
+
+    private static int[] ApplyItemClauseToPool(IEnumerable<int> itemPool, HashSet<int> usedItems)
+    {
+        int[] pool = itemPool.Where(i => i > 0).Distinct().ToArray();
+        if (!rItemClause || usedItems is null || usedItems.Count == 0)
+            return pool;
+
+        int[] filtered = pool.Where(item => !usedItems.Contains(item)).ToArray();
+        return filtered.Length > 0 ? filtered : pool;
+    }
+
+    private static void TrackItemClause(int item, HashSet<int> usedItems)
+    {
+        if (!rItemClause || usedItems is null || item <= 0)
+            return;
+
+        usedItems.Add(item);
+    }
+
+    private static bool ShouldUseBetterMoveset(TrainerMoveRule rule, int trainerID, bool isImportantTrainer, string trainerGroup, int level)
+    {
+        if (rule != null && rule.Enabled && rule.BetterMovesets)
+            return true;
+
+        if (!rBetterMovesets)
+            return false;
+
+        return rTrainerBetterMovesetTemplate?.ShouldApply(trainerID, isImportantTrainer, trainerGroup, level) ?? true;
     }
 
     private static bool ShouldApplyMoveRule(TrainerMoveRule rule)

@@ -1,4 +1,4 @@
-﻿using pk3DS.Core;
+using pk3DS.Core;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -213,6 +213,10 @@ public partial class TrainerRand : Form
     private Button B_SetTrainerMoveRules;
     private CheckBox CHK_RandomDoubleBattles;
     private NumericUpDown NUD_DoubleBattleChance;
+    private CheckBox CHK_SmartHeldItems;
+    private CheckBox CHK_ItemClause;
+    private ComboBox CB_SmartHeldItemMode;
+    private CheckBox CHK_BetterMovesets;
 
     private List<ProgressiveBSTRule> ProgressiveBSTRules = GetDefaultProgressiveBSTRules();
     private List<TrainerLevelCapRule> LevelCapRules = [];
@@ -251,6 +255,7 @@ public partial class TrainerRand : Form
         RSTE.rRandomDoubleBattles = CHK_RandomDoubleBattles.Checked;
         RSTE.rRandomDoubleBattleChance = (int)NUD_DoubleBattleChance.Value;
         RSTE.rNoFixedDamage = CHK_NoFixedDamage.Checked;
+        RSTE.rBetterMovesets = CHK_BetterMovesets?.Checked ?? false;
 
         RSTE.rMove = CB_Moves.SelectedIndex == 1;
         RSTE.rNoMove = CB_Moves.SelectedIndex == 2;
@@ -265,6 +270,10 @@ public partial class TrainerRand : Form
                 RSTE.rSTABCount = (int)NUD_STAB.Value;
         }
         RSTE.rItem = CHK_RandomItems.Checked;
+        RSTE.rBanBadTrainerItems = CHK_RandomItems.Checked && CHK_SmartHeldItems != null && CHK_SmartHeldItems.Checked;
+        RSTE.rItemClause = CHK_RandomItems.Checked && CHK_ItemClause != null && CHK_ItemClause.Checked;
+        RSTE.rSmartTrainerItems = false; // v4.9.4 legacy global smart disabled; per-trainer Smart Items comes from Move Rules. // v4.9.2 force smart items in Gen6
+        RSTE.rSmartTrainerItemMode = CB_SmartHeldItemMode == null || CB_SmartHeldItemMode.SelectedIndex < 0 ? 1 : CB_SmartHeldItemMode.SelectedIndex;
         RSTE.rAbility = CHK_RandomAbilities.Checked;
         RSTE.rDiffIV = CHK_MaxDiffPKM.Checked;
 
@@ -513,7 +522,70 @@ public partial class TrainerRand : Form
         NUD_DoubleBattleChance.BringToFront();
         L_DoubleBattlePercent.BringToFront();
 
-        int requiredTopWidth = Math.Max(B_SetTrainerMoveRules.Right, L_DoubleBattlePercent.Right) + 16;
+        CHK_BetterMovesets = new CheckBox
+        {
+            AutoSize = true,
+            Location = new System.Drawing.Point(CB_Moves.Right + 12, CB_Moves.Top + 2),
+            Name = "CHK_BetterMovesets",
+            TabIndex = 1006,
+            Text = "Better Movesets",
+            UseVisualStyleBackColor = true,
+            Checked = false,
+        };
+
+        Controls.Add(CHK_BetterMovesets);
+        CHK_BetterMovesets.BringToFront();
+
+
+        CHK_SmartHeldItems = new CheckBox
+        {
+            AutoSize = true,
+            Location = new System.Drawing.Point(220, CHK_RandomItems.Top),
+            Name = "CHK_BanBadItems",
+            TabIndex = 1010,
+            Text = "Ban Bad Items",
+            UseVisualStyleBackColor = true,
+            Enabled = CHK_RandomItems.Checked,
+        };
+
+        CHK_ItemClause = new CheckBox
+        {
+            AutoSize = true,
+            Location = new System.Drawing.Point(CHK_SmartHeldItems.Left, CHK_SmartHeldItems.Bottom + 6),
+            Name = "CHK_ItemClause",
+            TabIndex = 1011,
+            Text = "Item Clause",
+            UseVisualStyleBackColor = true,
+            Enabled = CHK_RandomItems.Checked,
+        };
+
+        CB_SmartHeldItemMode = new ComboBox
+        {
+            DropDownStyle = ComboBoxStyle.DropDownList,
+            Location = new System.Drawing.Point(320, CHK_RandomItems.Top - 2),
+            Name = "CB_SmartHeldItemMode",
+            Size = new System.Drawing.Size(105, 21),
+            TabIndex = 1012,
+            Enabled = CHK_RandomItems.Checked,
+        };
+
+        CB_SmartHeldItemMode.Items.AddRange(new object[] { "Normal", "Strong", "Competitive" });
+        CB_SmartHeldItemMode.SelectedIndex = 1;
+
+        CHK_RandomItems.CheckedChanged += (_, _) =>
+        {
+            CHK_SmartHeldItems.Enabled = CHK_RandomItems.Checked;
+            CHK_ItemClause.Enabled = CHK_RandomItems.Checked;
+            // v4.9.4 mode combo removed; smart item quality is controlled by Move Rules.
+        };
+
+        Controls.Add(CHK_SmartHeldItems);
+        Controls.Add(CHK_ItemClause);
+        // v4.9.4 mode combo removed; smart item quality is controlled by Move Rules.
+        CHK_SmartHeldItems.BringToFront();
+        CHK_ItemClause.BringToFront();
+        // v4.9.4 mode combo removed; smart item quality is controlled by Move Rules.
+        int requiredTopWidth = Math.Max(Math.Max(Math.Max(B_SetTrainerMoveRules.Right, L_DoubleBattlePercent.Right), CHK_BetterMovesets.Right), CB_SmartHeldItemMode.Right) + 16;
         if (ClientSize.Width < requiredTopWidth)
             ClientSize = new System.Drawing.Size(requiredTopWidth, ClientSize.Height);
 
@@ -524,7 +596,7 @@ public partial class TrainerRand : Form
 
         int requiredFormWidth = GB_Tweak.Right + 16;
 
-        int requiredFormHeight = CHK_RandomDoubleBattles.Bottom + 44;
+        int requiredFormHeight = Math.Max(CHK_RandomDoubleBattles.Bottom + 44, CHK_ItemClause.Bottom + 48);
         if (ClientSize.Height < requiredFormHeight)
             ClientSize = new System.Drawing.Size(ClientSize.Width, requiredFormHeight);
 

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
@@ -78,14 +78,30 @@ public static class TrainerMoveRulesDialog
             Width = 95,
         });
 
-        
+        grid.Columns.Add(new DataGridViewCheckBoxColumn
+        {
+            DataPropertyName = nameof(TrainerMoveRule.BetterMovesets),
+            HeaderText = "Better Movesets",
+            ToolTipText = "Force Better Movesets for this trainer. Works when Use is checked, even if the global Better Movesets checkbox is off.",
+            Width = 115,
+        });
+
+        grid.Columns.Add(new DataGridViewCheckBoxColumn
+        {
+            DataPropertyName = nameof(TrainerMoveRule.SmartItems),
+            HeaderText = "Smart Items",
+            ToolTipText = "Give this trainer competitive held items based on its final moveset. Only works when Use is checked and Random Held Items is enabled.",
+            Width = 90,
+        });
         grid.Columns.Add(new DataGridViewTextBoxColumn
         {
             DataPropertyName = nameof(TrainerMoveRule.OverrideEVs),
             HeaderText = "EVs (-1=Off)",
             ToolTipText = "Set all EV stats for every PokÃ©mon in this trainer battle. -1 disables EV override.",
             Width = 95,
-        });grid.Columns.Add(new DataGridViewTextBoxColumn
+        });
+
+        grid.Columns.Add(new DataGridViewTextBoxColumn
         {
             DataPropertyName = nameof(TrainerMoveRule.TrainerID),
             HeaderText = "ID",
@@ -195,7 +211,7 @@ public static class TrainerMoveRulesDialog
             Height = 72,
             TextAlign = ContentAlignment.MiddleLeft,
             Padding = new Padding(8, 0, 8, 0),
-            Text = "Strong Stat compares base Attack vs Sp. Attack. If the difference is greater than Tolerance, the PokÃ©mon uses only Physical or Special damaging moves. If the difference is within Tolerance, both categories are allowed. Allow Status is enabled by default. Min Power 0 disables minimum power filtering. EVs -1 disables EV override; otherwise the selected value is applied to all EV stats of every PokÃ©mon in that trainer battle. The EV buttons apply to every trainer with Use checked, regardless of selected rows. The EV buttons apply to every trainer with Use checked, regardless of selected rows.",
+            Text = "Strong Stat compares base Attack vs Sp. Attack. If the difference is greater than Tolerance, the PokÃ©mon uses only Physical or Special damaging moves. If the difference is within Tolerance, both categories are allowed. Allow Status is enabled by default. Better Movesets forces the improved moveset builder for Use-checked trainers even when the global Better Movesets checkbox is off. Min Power 0 disables minimum power filtering. Smart Items gives competitive held items only to Use-checked trainers. EVs -1 disables EV override; otherwise the selected value is applied to all EV stats of every PokÃ©mon in that trainer battle. The EV buttons apply to every trainer with Use checked, regardless of selected rows. The EV buttons apply to every trainer with Use checked, regardless of selected rows.",
         };
 
         var buttons = new FlowLayoutPanel
@@ -211,15 +227,19 @@ public static class TrainerMoveRulesDialog
         var selectAll = new Button { Text = "Select All", Width = 90 };
         var selectNone = new Button { Text = "Select None", Width = 90 };
         var allowStatusAll = new Button { Text = "Allow Status All", Width = 120 };
+        var betterMovesetsAll = new Button { Text = "Better Movesets All", Width = 135 };
+        var betterMovesetsNone = new Button { Text = "Better Movesets None", Width = 145 };
 
         selectAll.Click += (_, _) => SetSelected(editableRules, true);
         selectNone.Click += (_, _) => SetSelected(editableRules, false);
         allowStatusAll.Click += (_, _) =>
         {
-            foreach (var rule in editableRules)
+            foreach (var rule in editableRules.Where(r => r.Enabled))
                 rule.AllowStatusMoves = true;
             editableRules.ResetBindings();
         };
+        betterMovesetsAll.Click += (_, _) => SetBetterMovesets(editableRules, true);
+        betterMovesetsNone.Click += (_, _) => SetBetterMovesets(editableRules, false);
 
         List<TrainerMoveRule>? acceptedRules = null;
 
@@ -242,6 +262,8 @@ public static class TrainerMoveRulesDialog
 
         buttons.Controls.Add(ok);
         buttons.Controls.Add(cancel);
+        buttons.Controls.Add(betterMovesetsNone);
+        buttons.Controls.Add(betterMovesetsAll);
         buttons.Controls.Add(allowStatusAll);
         buttons.Controls.Add(selectNone);
         buttons.Controls.Add(selectAll);
@@ -262,6 +284,13 @@ public static class TrainerMoveRulesDialog
     {
         foreach (var rule in rules)
             rule.Enabled = value;
+        rules.ResetBindings();
+    }
+
+    private static void SetBetterMovesets(BindingList<TrainerMoveRule> rules, bool value)
+    {
+        foreach (var rule in rules.Where(r => r.Enabled))
+            rule.BetterMovesets = value;
         rules.ResetBindings();
     }
 

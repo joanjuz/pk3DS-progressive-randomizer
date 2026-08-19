@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -15,6 +15,10 @@ namespace pk3DS.WinForms;
 
 public partial class SMTE : Form
 {
+    private CheckBox CHK_SmartHeldItems;
+    private CheckBox CHK_ItemClause;
+    private ComboBox CB_SmartHeldItemMode;
+    private CheckBox CHK_BetterMovesets;
     private readonly LearnsetRandomizer learn = new(Main.Config, Main.Config.Learnsets);
     private readonly TrainerData7[] Trainers;
     private string[][] AltForms;
@@ -34,6 +38,9 @@ public partial class SMTE : Form
     private Button B_SetTrainerMoveRules;
     private CheckBox CHK_RandomDoubleBattles;
     private NumericUpDown NUD_DoubleBattleChance;
+    private CheckBox CHK_BanBadItems;
+    private TrainerHeldItemTemplate HeldItemTemplate;
+    private TrainerBetterMovesetTemplate BetterMovesetTemplate;
 
     private List<ProgressiveBSTRule> ProgressiveBSTRules = GetDefaultProgressiveBSTRules();
     private List<TrainerLevelCapRule> LevelCapRules = [];
@@ -66,6 +73,10 @@ public partial class SMTE : Form
         trpoke = trp;
         TrainerNames = new TextData(trName);
         InitializeComponent();
+        TrainerHeldItemTemplate.EnsureDefaultFile();
+        TrainerBetterMovesetTemplate.EnsureDefaultFile();
+        AddSmartHeldItemControls();
+        AddBetterMovesetControls();
         AddProgressiveBSTControls();
 
         mnuView.Click += ClickView;
@@ -77,6 +88,7 @@ public partial class SMTE : Form
         MoveRules = TrainerMoveRule.FromLevelCapRules(LevelCapRules);
         AddLevelCapControls();
         FixGen7TrainerOptionsLayout();
+        AddBanBadItemsControl();
         foreach (var pb in pba)
             pb.Click += ClickSlot;
 
@@ -524,6 +536,130 @@ public partial class SMTE : Form
 
     private static string GetEntryTitle(string str, int i) => $"{str} - {i:000}";
 
+
+    private void AddSmartHeldItemControls()
+    {
+        try
+        {
+            CHK_SmartHeldItems ??= new CheckBox
+            {
+                Name = "CHK_SmartHeldItems",
+                Text = "Smart Items",
+                AutoSize = true,
+                Checked = false,
+            };
+
+            CB_SmartHeldItemMode ??= new ComboBox
+            {
+                Name = "CB_SmartHeldItemMode",
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Width = 95,
+            };
+
+            if (CB_SmartHeldItemMode.Items.Count == 0)
+            {
+                CB_SmartHeldItemMode.Items.AddRange(new object[] { "Normal", "Strong", "Competitive" });
+                CB_SmartHeldItemMode.SelectedIndex = 1;
+            }
+
+            CHK_ItemClause ??= new CheckBox
+            {
+                Name = "CHK_ItemClause",
+                Text = "Item Clause",
+                AutoSize = true,
+                Checked = false,
+            };
+
+            var randomItems = Controls.Find("CHK_RandomItems", true).FirstOrDefault() as CheckBox;
+            Control parent = randomItems?.Parent;
+            parent ??= Tab_PKM2;
+            parent ??= this;
+
+            if (!parent.Controls.Contains(CHK_SmartHeldItems))
+                parent.Controls.Add(CHK_SmartHeldItems);
+
+            if (!parent.Controls.Contains(CB_SmartHeldItemMode))
+                parent.Controls.Add(CB_SmartHeldItemMode);
+
+            if (!parent.Controls.Contains(CHK_ItemClause))
+                parent.Controls.Add(CHK_ItemClause);
+
+            int x = randomItems is not null ? randomItems.Left : 6;
+            int y = randomItems is not null ? randomItems.Bottom + 5 : 122;
+
+            CHK_SmartHeldItems.Location = new Point(x, y);
+            CB_SmartHeldItemMode.Location = new Point(x + 105, y - 2);
+            CHK_ItemClause.Location = new Point(x, CHK_SmartHeldItems.Bottom + 5);
+            CHK_SmartHeldItems.Enabled = randomItems?.Checked ?? true;
+            CB_SmartHeldItemMode.Enabled = randomItems?.Checked ?? true;
+            CHK_ItemClause.Enabled = randomItems?.Checked ?? true;
+
+            if (randomItems is not null)
+            {
+                randomItems.CheckedChanged += (_, _) =>
+                {
+                    CHK_SmartHeldItems.Enabled = randomItems.Checked;
+                    CB_SmartHeldItemMode.Enabled = randomItems.Checked;
+                    CHK_ItemClause.Enabled = randomItems.Checked;
+                };
+            }
+
+            CHK_SmartHeldItems.BringToFront();
+            CB_SmartHeldItemMode.BringToFront();
+            CHK_ItemClause.BringToFront();
+        }
+        catch
+        {
+            // UI-only helper.
+        }
+    }
+
+    private bool UseSmartTrainerItems()
+        => CHK_SmartHeldItems is not null && CHK_SmartHeldItems.Checked;
+
+    private int GetSmartTrainerItemMode()
+        => CB_SmartHeldItemMode is null ? 1 : Math.Max(0, CB_SmartHeldItemMode.SelectedIndex);
+
+    private bool UseItemClause()
+        => CHK_RandomItems.Checked && CHK_ItemClause is not null && CHK_ItemClause.Checked;
+
+    private void AddBetterMovesetControls()
+    {
+        try
+        {
+            CHK_BetterMovesets ??= new CheckBox
+            {
+                Name = "CHK_BetterMovesets",
+                Text = "Better Movesets",
+                AutoSize = true,
+                Checked = false,
+            };
+
+            Control parent = CB_Moves?.Parent;
+            if (parent is null)
+                parent = Tab_Rand;
+            if (parent is null)
+                parent = this;
+            if (!parent.Controls.Contains(CHK_BetterMovesets))
+                parent.Controls.Add(CHK_BetterMovesets);
+
+            int x = CB_Moves is not null ? CB_Moves.Right + 12 : 220;
+            int y = CB_Moves is not null ? CB_Moves.Top + 2 : 270;
+            CHK_BetterMovesets.Location = new Point(x, y);
+            CHK_BetterMovesets.BringToFront();
+
+            int neededWidth = CHK_BetterMovesets.Right + 20;
+            if (parent.Width < neededWidth)
+                parent.Width = neededWidth;
+        }
+        catch
+        {
+            // UI-only helper.
+        }
+    }
+
+    private bool UseBetterMovesets()
+        => CHK_BetterMovesets is not null && CHK_BetterMovesets.Checked;
     private void Setup()
     {
         AltForms = forms.Select(_ => Enumerable.Range(0, 100).Select(i => i.ToString()).ToArray()).ToArray();
@@ -1154,15 +1290,55 @@ public partial class SMTE : Form
         };
 
         var items = Randomizer.GetRandomItemList();
+
+        if (CHK_BanBadItems is not null && CHK_BanBadItems.Checked)
+        {
+            int[] cleanItems = SmartTrainerItemPicker.GetBanBadItemPool(items);
+            if (cleanItems.Length > 0)
+                items = cleanItems;
+        }
+
+        items = SmartTrainerItemPicker.AddSmartTrainerItemPoolExtras(items);
+
+        HeldItemTemplate = CHK_RandomItems.Checked
+            ? TrainerHeldItemTemplate.LoadOrCreateDefault(itemlist, items)
+            : null;
+
+        if (HeldItemTemplate is not null && HeldItemTemplate.Warnings.Count > 0)
+        {
+            WinFormsUtil.Alert(
+                string.Join(Environment.NewLine, HeldItemTemplate.Warnings.Take(8)),
+                $"Held item template loaded with {HeldItemTemplate.Warnings.Count} warning(s)."
+            );
+        }
+
+        BetterMovesetTemplate = UseBetterMovesets()
+            ? TrainerBetterMovesetTemplate.LoadOrCreateDefault()
+            : null;
+
+        if (BetterMovesetTemplate is not null && BetterMovesetTemplate.Warnings.Count > 0)
+        {
+            WinFormsUtil.Alert(
+                string.Join(Environment.NewLine, BetterMovesetTemplate.Warnings.Take(8)),
+                $"Better moveset template loaded with {BetterMovesetTemplate.Warnings.Count} warning(s)."
+            );
+        }
+
         var levelCapStages = BuildLevelCapStages();
+
+        int progressTotal = Math.Max(1, Trainers.Length);
+        using var progress = TrainerRandomizeProgress.Show(this, "Randomizing Trainers", progressTotal);
 
         for (int i = 0; i < Trainers.Length; i++)
         {
             var tr = Trainers[i];
+            progress.Report(i + 1, progressTotal, GetTrainerDisplayName(tr));
             if (tr.Pokemon.Count == 0)
                 continue;
 
             int trainerAce = GetAceLevel(tr);
+            bool isImportantTrainer = ImportantTrainers.Contains(tr.ID);
+            string trainerGroup = isImportantTrainer ? "Important" : "Regular";
 
             // Trainer Properties
             if (CHK_RandomClass.Checked)
@@ -1212,7 +1388,7 @@ public partial class SMTE : Form
                 tr.Pokemon.RemoveRange((int)NUD_RMax.Value, (int)(tr.NumPokemon - NUD_RMax.Value));
                 tr.NumPokemon = (int)NUD_RMax.Value;
             }
-            if (CHK_6PKM.Checked && ImportantTrainers.Contains(tr.ID))
+            if (CHK_6PKM.Checked && isImportantTrainer)
             {
                 for (int g = tr.NumPokemon; g < 6; g++)
                 {
@@ -1242,6 +1418,7 @@ public partial class SMTE : Form
             var moveRule = GetTrainerMoveRule(tr.ID);
             var randomItemPool = GetTrainerRandomItemPool(items, forceMega, forceZMove);
             int zMoveSlot = GetZMoveSlot(tr.Pokemon.Count, forceMega, forceZMove);
+            var usedHeldItems = UseItemClause() ? new HashSet<int>() : null;
 
             // PKM Properties
             for (int p = 0; p < tr.Pokemon.Count; p++)
@@ -1298,7 +1475,7 @@ public partial class SMTE : Form
                                 pk.Species = rnd.GetRandomSpeciesType(pk.Species, Type);
                             }
                         }
-                        pk.Item = randomItemPool[Util.Random32() % randomItemPool.Length];
+                        // Item is assigned after final moves so Smart Held Items can match the moveset.
                         pk.Form = Randomizer.GetRandomForme(pk.Species, CHK_RandomMegaForm.Checked, true, Main.SpeciesStat);
                     }
 
@@ -1347,24 +1524,132 @@ public partial class SMTE : Form
                 if (CHK_ForceHighPower.Checked && pk.Level >= NUD_ForceHighPower.Value)
                     pk.Moves = learn.GetHighPoweredMoves(pk.Species, pk.Form, 4);
 
+                if (ShouldUseBetterMoveset(moveRule, tr.ID, isImportantTrainer, trainerGroup, pk.Level) && CB_Moves.SelectedIndex != 3)
+                {
+                    int teamWeatherMask = GetTeamWeatherSupportMask(tr);
+                    pk.Moves = SmartTrainerMovePicker.PickBetterMoveset(
+                        pk.Species,
+                        pk.Form,
+                        pk.Level,
+                        pk.Moves,
+                        move,
+                        learn,
+                        moveRule,
+                        move.rDMG ? move.rDMGCount : 0,
+                        pk.Ability,
+                        7,
+                        teamWeatherMask
+                    );
+                }
+
                 if (ShouldApplyMoveRule(moveRule) && CB_Moves.SelectedIndex != 3)
                     pk.Moves = ApplyTrainerMoveRule(pk.Moves, pk.Species, moveRule, move, move.rDMG ? move.rDMGCount : 0);
 
                 if (forceZMove && p == zMoveSlot)
                     EnsureZMove(pk, move);
 
-                // sanitize moves
+                // sanitize moves before assigning Smart/Template items so held items see the final moveset
                 if (CB_Moves.SelectedIndex > 1) // learn source
                 {
                     var moves = pk.Moves;
                     if (move.SanitizeMovesetForBannedMoves(moves, pk.Species))
                         pk.Moves = moves;
                 }
+
+                bool canRandomizeItem = CHK_RandomItems.Checked && !(forceMega && p == tr.Pokemon.Count - 1) && !(forceZMove && p == zMoveSlot);
+                if (canRandomizeItem && usedHeldItems is not null)
+                    usedHeldItems.Remove(pk.Item);
+
+                int[] slotItemPool = ApplyItemClauseToPool(randomItemPool, usedHeldItems);
+
+                if (canRandomizeItem && HeldItemTemplate is null)
+                {
+                    bool forceSmartFromRule = moveRule is not null && moveRule.Enabled && moveRule.SmartItems;
+                    if (forceSmartFromRule || UseSmartTrainerItems())
+                    {
+                        pk.Item = SmartTrainerItemPicker.Pick(
+                            pk.Species,
+                            pk.Form,
+                            pk.Level,
+                            pk.Moves,
+                            slotItemPool,
+                            pk.Ability,
+                            FinalEvo.Contains(pk.Species),
+                            forceSmartFromRule ? 2 : GetSmartTrainerItemMode()
+                        );
+                    }
+                    else
+                    {
+                        pk.Item = slotItemPool[Util.Random32() % slotItemPool.Length];
+                    }
+                }
+
+                if (canRandomizeItem && HeldItemTemplate is not null)
+                {
+                    int templateItem = HeldItemTemplate.PickItem(
+                        tr.ID,
+                        isImportantTrainer,
+                        trainerGroup,
+                        pk.Item,
+                        pk.Species,
+                        pk.Form,
+                        pk.Level,
+                        pk.Moves,
+                        slotItemPool,
+                        pk.Ability,
+                        FinalEvo.Contains(pk.Species),
+                        GetSmartTrainerItemMode(),
+                        usedHeldItems
+                    );
+
+                    pk.Item = Math.Max(0, templateItem);
+                }
+
+                if (canRandomizeItem)
+                    TrackItemClause(pk.Item, usedHeldItems);
             }
             SaveData(tr, i);
         }
         WinFormsUtil.Alert("Randomized all Trainers according to specification!", "Press the Dump to .TXT button to view the new Trainer information!");
     }
+
+    private static int GetTeamWeatherSupportMask(TrainerData7 tr)
+    {
+        int mask = 0;
+        foreach (var ally in tr.Pokemon)
+            mask |= SmartTrainerMovePicker.GetWeatherAbilityMask(ally.Species, ally.Ability);
+        return mask;
+    }
+
+    private static int[] ApplyItemClauseToPool(IEnumerable<int> itemPool, HashSet<int> usedItems)
+    {
+        int[] pool = itemPool.Where(i => i > 0).Distinct().ToArray();
+        if (usedItems is null || usedItems.Count == 0)
+            return pool;
+
+        int[] filtered = pool.Where(item => !usedItems.Contains(item)).ToArray();
+        return filtered.Length > 0 ? filtered : pool;
+    }
+
+    private static void TrackItemClause(int item, HashSet<int> usedItems)
+    {
+        if (usedItems is null || item <= 0)
+            return;
+
+        usedItems.Add(item);
+    }
+
+    private bool ShouldUseBetterMoveset(TrainerMoveRule rule, int trainerID, bool isImportantTrainer, string trainerGroup, int level)
+    {
+        if (rule != null && rule.Enabled && rule.BetterMovesets)
+            return true;
+
+        if (!UseBetterMovesets())
+            return false;
+
+        return BetterMovesetTemplate?.ShouldApply(trainerID, isImportantTrainer, trainerGroup, level) ?? true;
+    }
+
     private static bool ShouldApplyMoveRule(TrainerMoveRule rule)
     {
         return rule is not null && (rule.MinMovePower > 0 || rule.UseStrongestAttackStat || !rule.AllowStatusMoves);
@@ -1558,9 +1843,24 @@ public partial class SMTE : Form
 
     private static readonly Dictionary<int, int> ZCrystalByMoveType = new()
     {
-        [0] = 776, [1] = 782, [2] = 785, [3] = 783, [4] = 784, [5] = 788,
-        [6] = 787, [7] = 789, [8] = 792, [9] = 777, [10] = 778, [11] = 780,
-        [12] = 779, [13] = 786, [14] = 781, [15] = 790, [16] = 791, [17] = 793,
+        [0] = 776,
+        [1] = 782,
+        [2] = 785,
+        [3] = 783,
+        [4] = 784,
+        [5] = 788,
+        [6] = 787,
+        [7] = 789,
+        [8] = 792,
+        [9] = 777,
+        [10] = 778,
+        [11] = 780,
+        [12] = 779,
+        [13] = 786,
+        [14] = 781,
+        [15] = 790,
+        [16] = 791,
+        [17] = 793,
     };
 
     private static int[] GetTrainerRandomItemPool(int[] items, bool forceMega, bool forceZMove)
@@ -1794,6 +2094,42 @@ public partial class SMTE : Form
         catch
         {
             // UI-only adjustment. If something is missing in a different build, do not block the editor.
+        }
+    }
+
+    private void AddBanBadItemsControl()
+    {
+        try
+        {
+            CHK_BanBadItems ??= new CheckBox
+            {
+                AutoSize = true,
+                Location = new Point(CHK_RandomItems.Left, CHK_RandomItems.Bottom + 6),
+                Name = "CHK_BanBadItems",
+                TabIndex = 1012,
+                Text = "Ban Bad Items",
+                UseVisualStyleBackColor = true,
+                Enabled = CHK_RandomItems.Checked,
+                Checked = true,
+            };
+
+            CHK_RandomItems.CheckedChanged += (_, _) =>
+            {
+                CHK_BanBadItems.Enabled = CHK_RandomItems.Checked;
+            };
+
+            Control parent = CHK_RandomItems.Parent;
+            parent ??= Tab_PKM2;
+            parent ??= this;
+
+            if (!parent.Controls.Contains(CHK_BanBadItems))
+                parent.Controls.Add(CHK_BanBadItems);
+
+            CHK_BanBadItems.BringToFront();
+        }
+        catch
+        {
+            // UI-only helper.
         }
     }
     private void AddProgressiveBSTControls()
