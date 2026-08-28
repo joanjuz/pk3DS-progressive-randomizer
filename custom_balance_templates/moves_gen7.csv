@@ -1,34 +1,38 @@
-Move,Power,Accuracy,PP,CriticalStage,Heal,Inflict,InflictChance,ClearStatEffects,KingShieldAttackMinusOne
-# You can use move IDs or exact move names. Empty cells mean keep current value.,,,,,,,,,
-15,70,100,15,1,,,,,
-249,60,100,,,,,,,
-19,100,100,,,,,,,
-147,,90,,,,,,,
-137,,90,15,,,,,,
-591,95,95,10,,,,,true,
-613,80,100,,,50,,,,
-448,80,100,15,,,6,15,,
-141,70,100,15,,,,,,
-188,60,100,,,,,,,
-552,70,100,,,,,,,
-594,20,100,,,,,,,
-182,,,7,,,,,,
-197,,,7,,,,,,
-596,,,7,,,,,,
-588,,,7,,,,,,true
-476,,,7,,,,,,
-266,,,7,,,,,,
-502,,,7,,,,,,
-73,,,7,,,,,,
-281,,,7,,,,,,
-270,,,5,,,,,,
-105,,,5,,,,,,
-234,,,5,,,,,,
-236,,,5,,,,,,
-208,,,5,,,,,,
-303,,,5,,,,,,
-235,,,5,,,,,,
-456,,,5,,,,,,
-135,,,5,,,,,,
-355,,,5,,,,,,
-505,,,5,,,,,,
+# Custom Move Balance Template
+# ------------------------------------------------------------
+# This CSV controls move-data edits applied by Move Editor -> Balance moves.
+#
+# Important:
+#   Keep the header row below.
+#   Lines starting with # are comments.
+#   Leave cells empty when you do not want to change that value.
+#   This template contains no active move rows by default.
+#
+# Main columns:
+#   Move                       = move ID or move name
+#   Type                       = new move type
+#   Category                   = Physical, Special or Status
+#   Quality                    = optional quality/grouping text
+#   Power, Accuracy, PP         = basic move values
+#   Priority                   = move priority
+#   HitMin, HitMax              = multi-hit values
+#   CriticalStage               = critical-hit stage
+#   Flinch                     = flinch chance
+#   Effect                     = raw effect ID
+#   Param0x0B                  = raw effect parameter at 0x0B
+#   Inflict, InflictChance      = status condition and chance
+#   Heal, Recoil                = heal/recoil parameters when supported by the effect
+#   TurnMin, TurnMax            = turn-duration parameters when supported by the effect
+#   Targeting                  = raw targeting mode
+#   ClearStatEffects           = true/false; clears existing stat-change fields
+#   UserStat/UserStatChange/UserStatChance
+#   TargetStat/TargetStatChange/TargetStatChance
+#   Stat1/Stat1Change/Stat1Chance ... Stat3/Stat3Change/Stat3Chance
+#   ClearFlags, SetFlags, UnsetFlags
+#   KingShieldAttackMinusOne   = true/false; applies the custom King's Shield -1 Attack patch when supported
+#   Notes                      = free text for documentation
+#
+# Example, commented out:
+# 588,,Status,,,,5,,,,,,,,,,,,,,,true,,,,Attack,-1,100,,,,,,,,,,,,,true,King's Shield example
+#
+Move,Type,Category,Quality,Power,Accuracy,PP,Priority,HitMin,HitMax,CriticalStage,Flinch,Effect,Param0x0B,Inflict,InflictChance,Heal,Recoil,TurnMin,TurnMax,Targeting,ClearStatEffects,UserStat,UserStatChange,UserStatChance,TargetStat,TargetStatChange,TargetStatChance,Stat1,Stat1Change,Stat1Chance,Stat2,Stat2Change,Stat2Chance,Stat3,Stat3Change,Stat3Chance,ClearFlags,SetFlags,UnsetFlags,KingShieldAttackMinusOne,Notes

@@ -1,5 +1,6 @@
-﻿using pk3DS.Core;
+using pk3DS.Core;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
 using pk3DS.Core.Structures;
@@ -77,14 +78,46 @@ public partial class MoveEditor6 : Form
     private sealed class MoveBalancePatch
     {
         public int Move { get; init; }
+        public string Type { get; init; } = string.Empty;
+        public string Category { get; init; } = string.Empty;
+        public string Quality { get; init; } = string.Empty;
         public int? Power { get; init; }
         public int? Accuracy { get; init; }
         public int? PP { get; init; }
+        public int? Priority { get; init; }
+        public int? HitMin { get; init; }
+        public int? HitMax { get; init; }
         public int? CriticalStage { get; init; }
+        public int? Flinch { get; init; }
+        public int? Effect { get; init; }
+        public int? Param0x0B { get; init; }
         public int? Heal { get; init; }
+        public int? Recoil { get; init; }
+        public int? TurnMin { get; init; }
+        public int? TurnMax { get; init; }
+        public string Targeting { get; init; } = string.Empty;
         public int? Inflict { get; init; }
+        public string InflictToken { get; init; } = string.Empty;
         public int? InflictChance { get; init; }
         public bool ClearStatEffects { get; init; }
+        public string UserStat { get; init; } = string.Empty;
+        public int? UserStatChange { get; init; }
+        public int? UserStatChance { get; init; }
+        public string TargetStat { get; init; } = string.Empty;
+        public int? TargetStatChange { get; init; }
+        public int? TargetStatChance { get; init; }
+        public string Stat1 { get; init; } = string.Empty;
+        public int? Stat1Change { get; init; }
+        public int? Stat1Chance { get; init; }
+        public string Stat2 { get; init; } = string.Empty;
+        public int? Stat2Change { get; init; }
+        public int? Stat2Chance { get; init; }
+        public string Stat3 { get; init; } = string.Empty;
+        public int? Stat3Change { get; init; }
+        public int? Stat3Chance { get; init; }
+        public bool ClearFlags { get; init; }
+        public string SetFlags { get; init; } = string.Empty;
+        public string UnsetFlags { get; init; } = string.Empty;
         public bool KingShieldAttackMinusOne { get; init; }
     }
     private void FixMoveEditor6Layout()
@@ -118,14 +151,46 @@ public partial class MoveEditor6 : Form
         return templatePatches.Select(z => new MoveBalancePatch
         {
             Move = z.Move,
+            Type = z.Type,
+            Category = z.Category,
+            Quality = z.Quality,
             Power = z.Power,
             Accuracy = z.Accuracy,
             PP = z.PP,
+            Priority = z.Priority,
+            HitMin = z.HitMin,
+            HitMax = z.HitMax,
             CriticalStage = z.CriticalStage,
+            Flinch = z.Flinch,
+            Effect = z.Effect,
+            Param0x0B = z.Param0x0B,
             Heal = z.Heal,
+            Recoil = z.Recoil,
+            TurnMin = z.TurnMin,
+            TurnMax = z.TurnMax,
+            Targeting = z.Targeting,
             Inflict = z.Inflict,
+            InflictToken = z.InflictToken,
             InflictChance = z.InflictChance,
             ClearStatEffects = z.ClearStatEffects,
+            UserStat = z.UserStat,
+            UserStatChange = z.UserStatChange,
+            UserStatChance = z.UserStatChance,
+            TargetStat = z.TargetStat,
+            TargetStatChange = z.TargetStatChange,
+            TargetStatChance = z.TargetStatChance,
+            Stat1 = z.Stat1,
+            Stat1Change = z.Stat1Change,
+            Stat1Chance = z.Stat1Chance,
+            Stat2 = z.Stat2,
+            Stat2Change = z.Stat2Change,
+            Stat2Chance = z.Stat2Chance,
+            Stat3 = z.Stat3,
+            Stat3Change = z.Stat3Change,
+            Stat3Chance = z.Stat3Chance,
+            ClearFlags = z.ClearFlags,
+            SetFlags = z.SetFlags,
+            UnsetFlags = z.UnsetFlags,
             KingShieldAttackMinusOne = z.KingShieldAttackMinusOne,
         }).ToArray();
     }
@@ -140,32 +205,12 @@ public partial class MoveEditor6 : Form
 
             byte[] data = files[patch.Move];
 
-            if (data.Length < 0x22)
+            if (data.Length < 0x1E)
                 continue;
 
-            if (patch.Power.HasValue)
-                data[0x03] = (byte)patch.Power.Value;
-
-            if (patch.Accuracy.HasValue)
-                data[0x04] = (byte)patch.Accuracy.Value;
-
-            if (patch.PP.HasValue)
-                data[0x05] = (byte)patch.PP.Value;
-
-            if (patch.CriticalStage.HasValue)
-                data[0x0E] = (byte)patch.CriticalStage.Value;
-
-            if (patch.Heal.HasValue)
-                data[0x13] = (byte)patch.Heal.Value;
-
-            if (patch.Inflict.HasValue)
-                Array.Copy(BitConverter.GetBytes((short)patch.Inflict.Value), 0, data, 0x08, 2);
-
-            if (patch.InflictChance.HasValue)
-                data[0x0A] = (byte)patch.InflictChance.Value;
-
-            if (patch.ClearStatEffects)
-                ClearMoveStatEffects(data);
+            ApplyCoreMovePatch(data, patch);
+            ApplyStatPatches(data, patch);
+            ApplyFlagPatches(data, patch);
 
             if (patch.KingShieldAttackMinusOne)
                 SetKingShieldAttackDrop(data);
@@ -176,6 +221,348 @@ public partial class MoveEditor6 : Form
 
         return changed;
     }
+
+    private void ApplyCoreMovePatch(byte[] data, MoveBalancePatch patch)
+    {
+        SetOptionalByte(data, 0x00, ResolveType(patch.Type));
+        SetOptionalByte(data, 0x01, ResolveQuality(patch.Quality));
+        SetOptionalByte(data, 0x02, ResolveCategory(patch.Category));
+
+        if (patch.Power.HasValue)
+            data[0x03] = (byte)patch.Power.Value;
+
+        if (patch.Accuracy.HasValue)
+            data[0x04] = (byte)patch.Accuracy.Value;
+
+        if (patch.PP.HasValue)
+            data[0x05] = (byte)patch.PP.Value;
+
+        if (patch.Priority.HasValue)
+            data[0x06] = unchecked((byte)(sbyte)patch.Priority.Value);
+
+        if (patch.HitMin.HasValue || patch.HitMax.HasValue)
+        {
+            int min = patch.HitMin ?? (data[0x07] & 0xF);
+            int max = patch.HitMax ?? (data[0x07] >> 4);
+            data[0x07] = (byte)((min & 0xF) | ((max & 0xF) << 4));
+        }
+
+        int inflict = patch.Inflict ?? ResolveInflict(patch.InflictToken);
+        if (inflict >= 0)
+            Array.Copy(BitConverter.GetBytes((short)inflict), 0, data, 0x08, 2);
+
+        if (patch.InflictChance.HasValue)
+            data[0x0A] = (byte)patch.InflictChance.Value;
+
+        if (patch.Param0x0B.HasValue)
+            data[0x0B] = (byte)patch.Param0x0B.Value;
+
+        if (patch.TurnMin.HasValue)
+            data[0x0C] = (byte)patch.TurnMin.Value;
+
+        if (patch.TurnMax.HasValue)
+            data[0x0D] = (byte)patch.TurnMax.Value;
+
+        if (patch.CriticalStage.HasValue)
+            data[0x0E] = (byte)patch.CriticalStage.Value;
+
+        if (patch.Flinch.HasValue)
+            data[0x0F] = (byte)patch.Flinch.Value;
+
+        if (patch.Effect.HasValue)
+            Array.Copy(BitConverter.GetBytes((ushort)patch.Effect.Value), 0, data, 0x10, 2);
+
+        if (patch.Recoil.HasValue)
+            data[0x12] = unchecked((byte)(sbyte)patch.Recoil.Value);
+
+        if (patch.Heal.HasValue)
+            data[0x13] = (byte)patch.Heal.Value;
+
+        SetOptionalByte(data, 0x14, ResolveTargeting(patch.Targeting));
+    }
+
+    private void ApplyStatPatches(byte[] data, MoveBalancePatch patch)
+    {
+        if (patch.ClearStatEffects)
+            ClearMoveStatEffects(data);
+
+        if (!string.IsNullOrWhiteSpace(patch.UserStat))
+            ApplyNextStatSlot(data, patch.UserStat, patch.UserStatChange ?? 1, patch.UserStatChance ?? 100);
+
+        if (!string.IsNullOrWhiteSpace(patch.TargetStat))
+            ApplyNextStatSlot(data, patch.TargetStat, patch.TargetStatChange ?? -1, patch.TargetStatChance ?? 100);
+
+        ApplyExplicitStatSlot(data, 0, patch.Stat1, patch.Stat1Change, patch.Stat1Chance);
+        ApplyExplicitStatSlot(data, 1, patch.Stat2, patch.Stat2Change, patch.Stat2Chance);
+        ApplyExplicitStatSlot(data, 2, patch.Stat3, patch.Stat3Change, patch.Stat3Chance);
+    }
+
+    private void ApplyFlagPatches(byte[] data, MoveBalancePatch patch)
+    {
+        if (!patch.ClearFlags && string.IsNullOrWhiteSpace(patch.SetFlags) && string.IsNullOrWhiteSpace(patch.UnsetFlags))
+            return;
+
+        var move = new Move6(data);
+        uint flags = patch.ClearFlags ? 0 : (uint)move.Flags;
+        flags |= ResolveFlags(patch.SetFlags, typeof(MoveFlag6));
+        flags &= ~ResolveFlags(patch.UnsetFlags, typeof(MoveFlag6));
+        move.Flags = (MoveFlag6)flags;
+    }
+
+    private static uint ResolveFlags(string value, Type flagType)
+    {
+        uint result = 0;
+        if (string.IsNullOrWhiteSpace(value))
+            return result;
+
+        foreach (string token in CustomBalanceTemplates.SplitTokens(value))
+        {
+            if (uint.TryParse(token, out uint numeric))
+            {
+                result |= numeric;
+                continue;
+            }
+
+            string normalized = CustomBalanceTemplates.NormalizeToken(token);
+            foreach (string name in Enum.GetNames(flagType))
+            {
+                if (CustomBalanceTemplates.NormalizeToken(name) != normalized)
+                    continue;
+
+                object parsed = Enum.Parse(flagType, name);
+                result |= Convert.ToUInt32(parsed);
+                break;
+            }
+        }
+
+        return result;
+    }
+
+    private void ApplyNextStatSlot(byte[] data, string statToken, int change, int chance)
+    {
+        int stat = ResolveStat(statToken);
+        if (stat <= 0)
+            return;
+
+        for (int slot = 0; slot < 3; slot++)
+        {
+            int statOffset = 0x15 + slot;
+            if (data[statOffset] != 0)
+                continue;
+
+            ApplyStatSlot(data, slot, stat, change, chance);
+            return;
+        }
+
+        ApplyStatSlot(data, 2, stat, change, chance);
+    }
+
+    private void ApplyExplicitStatSlot(byte[] data, int slot, string statToken, int? change, int? chance)
+    {
+        int stat = ResolveStat(statToken);
+        if (stat <= 0)
+            return;
+
+        ApplyStatSlot(data, slot, stat, change ?? 0, chance ?? 100);
+    }
+
+    private static void ApplyStatSlot(byte[] data, int slot, int stat, int change, int chance)
+    {
+        data[0x15 + slot] = (byte)stat;
+        data[0x18 + slot] = unchecked((byte)(sbyte)change);
+        data[0x1B + slot] = (byte)chance;
+    }
+
+    private static void SetOptionalByte(byte[] data, int offset, int value)
+    {
+        if (value >= 0)
+            data[offset] = (byte)value;
+    }
+
+    private int ResolveType(string value)
+        => CustomBalanceTemplates.ResolveToken(value, types, TypeAliases);
+
+    private int ResolveCategory(string value)
+        => CustomBalanceTemplates.ResolveToken(value, MoveCategories, CategoryAliases);
+
+    private int ResolveQuality(string value)
+        => CustomBalanceTemplates.ResolveToken(value, MoveQualities);
+
+    private int ResolveTargeting(string value)
+        => CustomBalanceTemplates.ResolveToken(value, TargetingTypes, TargetingAliases);
+
+    private int ResolveInflict(string value)
+        => CustomBalanceTemplates.ResolveToken(value, InflictionTypes, InflictAliases);
+
+    private int ResolveStat(string value)
+        => CustomBalanceTemplates.ResolveToken(value, StatCategories, StatAliases);
+
+    private static readonly Dictionary<string, int> TypeAliases = new()
+    {
+        ["normal"] = 0,
+        ["fighting"] = 1,
+        ["lucha"] = 1,
+        ["flying"] = 2,
+        ["volador"] = 2,
+        ["poison"] = 3,
+        ["veneno"] = 3,
+        ["ground"] = 4,
+        ["tierra"] = 4,
+        ["rock"] = 5,
+        ["roca"] = 5,
+        ["bug"] = 6,
+        ["bicho"] = 6,
+        ["ghost"] = 7,
+        ["fantasma"] = 7,
+        ["steel"] = 8,
+        ["acero"] = 8,
+        ["fire"] = 9,
+        ["fuego"] = 9,
+        ["water"] = 10,
+        ["agua"] = 10,
+        ["grass"] = 11,
+        ["planta"] = 11,
+        ["electric"] = 12,
+        ["electrico"] = 12,
+        ["psychic"] = 13,
+        ["psiquico"] = 13,
+        ["ice"] = 14,
+        ["hielo"] = 14,
+        ["dragon"] = 15,
+        ["dark"] = 16,
+        ["siniestro"] = 16,
+        ["fairy"] = 17,
+        ["hada"] = 17,
+    };
+
+    private static readonly Dictionary<string, int> CategoryAliases = new()
+    {
+        ["status"] = 0,
+        ["estado"] = 0,
+        ["physical"] = 1,
+        ["fisico"] = 1,
+        ["special"] = 2,
+        ["especial"] = 2,
+    };
+
+    private static readonly Dictionary<string, int> StatAliases = new()
+    {
+        ["none"] = 0,
+        ["ninguno"] = 0,
+        ["attack"] = 1,
+        ["atk"] = 1,
+        ["ataque"] = 1,
+        ["defense"] = 2,
+        ["def"] = 2,
+        ["defensa"] = 2,
+        ["specialattack"] = 3,
+        ["spatk"] = 3,
+        ["specialatk"] = 3,
+        ["ataqueespecial"] = 3,
+        ["atakespecial"] = 3,
+        ["specialdefense"] = 4,
+        ["spdef"] = 4,
+        ["specialdef"] = 4,
+        ["defensaespecial"] = 4,
+        ["speed"] = 5,
+        ["spe"] = 5,
+        ["velocidad"] = 5,
+        ["accuracy"] = 6,
+        ["precision"] = 6,
+        ["evasion"] = 7,
+        ["all"] = 8,
+        ["todo"] = 8,
+        ["todos"] = 8,
+    };
+
+    private static readonly Dictionary<string, int> InflictAliases = new()
+    {
+        ["none"] = 0,
+        ["ninguno"] = 0,
+        ["paralyze"] = 1,
+        ["paralysis"] = 1,
+        ["paralisis"] = 1,
+        ["paralizar"] = 1,
+        ["sleep"] = 2,
+        ["dormir"] = 2,
+        ["sueno"] = 2,
+        ["freeze"] = 3,
+        ["congelar"] = 3,
+        ["congelacion"] = 3,
+        ["burn"] = 4,
+        ["quemar"] = 4,
+        ["quemadura"] = 4,
+        ["poison"] = 5,
+        ["veneno"] = 5,
+        ["envenenar"] = 5,
+        ["confusion"] = 6,
+        ["confundir"] = 6,
+        ["attract"] = 7,
+        ["atraccion"] = 7,
+        ["nightmare"] = 9,
+        ["pesadilla"] = 9,
+        ["curse"] = 10,
+        ["maldicion"] = 10,
+        ["taunt"] = 11,
+        ["mofa"] = 11,
+        ["torment"] = 12,
+        ["tormento"] = 12,
+        ["disable"] = 13,
+        ["anulacion"] = 13,
+        ["yawn"] = 14,
+        ["bostezo"] = 14,
+        ["healblock"] = 15,
+        ["anticura"] = 15,
+        ["detect"] = 17,
+        ["proteccion"] = 17,
+        ["leechseed"] = 18,
+        ["drenadoras"] = 18,
+        ["embargo"] = 19,
+        ["perishsong"] = 20,
+        ["cantoperish"] = 20,
+        ["cantomortal"] = 20,
+        ["ingrain"] = 21,
+        ["arraigo"] = 21,
+    };
+
+    private static readonly Dictionary<string, int> TargetingAliases = new()
+    {
+        ["single"] = 0,
+        ["selected"] = 0,
+        ["target"] = 0,
+        ["adjacent"] = 0,
+        ["seleccionado"] = 0,
+        ["ally"] = 1,
+        ["companero"] = 1,
+        ["adjacentally"] = 2,
+        ["singlefoe"] = 3,
+        ["foe"] = 3,
+        ["rival"] = 3,
+        ["opponent"] = 3,
+        ["everyonebutuser"] = 4,
+        ["allfoes"] = 5,
+        ["allenemies"] = 5,
+        ["enemigos"] = 5,
+        ["rivales"] = 5,
+        ["allallies"] = 6,
+        ["aliados"] = 6,
+        ["self"] = 7,
+        ["user"] = 7,
+        ["usuario"] = 7,
+        ["allpokemon"] = 8,
+        ["allfield"] = 8,
+        ["todos"] = 8,
+        ["entirefield"] = 10,
+        ["field"] = 10,
+        ["campo"] = 10,
+        ["opponentfield"] = 11,
+        ["foefield"] = 11,
+        ["camporival"] = 11,
+        ["userfield"] = 12,
+        ["allyfield"] = 12,
+        ["campousuario"] = 12,
+    };
+
     private static void ClearMoveStatEffects(byte[] data)
     {
         data[0x15] = 0;
@@ -191,13 +578,54 @@ public partial class MoveEditor6 : Form
         data[0x1D] = 0;
     }
 
-    private static void SetKingShieldAttackDrop(byte[] data)
+    private static int SetKingShieldAttackDrop(byte[] cro)
     {
-        ClearMoveStatEffects(data);
+        byte[] oldPattern =
+    {
+        0x01, 0x20, 0xA0, 0xE3,
+        0xFE, 0x30, 0xA0, 0xE3
+    };
 
-        data[0x15] = 1;
-        data[0x18] = unchecked((byte)-1);
-        data[0x1B] = 100;
+        byte[] alreadyPatched =
+        {
+        0x01, 0x20, 0xA0, 0xE3,
+        0xFF, 0x30, 0xA0, 0xE3
+    };
+
+        int offset = FindBytes(cro, oldPattern);
+
+        if (offset >= 0)
+        {
+            cro[offset + 4] = 0xFF;
+            return 1;
+        }
+
+        if (FindBytes(cro, alreadyPatched) >= 0)
+            return 0;
+
+        throw new InvalidOperationException("Could not find King's Shield attack drop pattern in DLLBattle.cro.");
+    }
+
+    private static int FindBytes(byte[] data, byte[] pattern)
+    {
+        for (int i = 0; i <= data.Length - pattern.Length; i++)
+        {
+            bool match = true;
+
+            for (int j = 0; j < pattern.Length; j++)
+            {
+                if (data[i + j] != pattern[j])
+                {
+                    match = false;
+                    break;
+                }
+            }
+
+            if (match)
+                return i;
+        }
+
+        return -1;
     }
     private static MoveBalancePatch[] GetBalancedMovePatches()
     {
