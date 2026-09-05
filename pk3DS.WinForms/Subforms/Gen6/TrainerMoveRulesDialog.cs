@@ -15,11 +15,11 @@ public static class TrainerMoveRulesDialog
         {
             Text = "Trainer Move Rules",
             StartPosition = FormStartPosition.CenterParent,
-            Size = new Size(1120, 600),
+            Size = new Size(1540, 680),
             MinimizeBox = false,
             MaximizeBox = false,
             FormBorderStyle = FormBorderStyle.Sizable,
-            MinimumSize = new Size(980, 520),
+            MinimumSize = new Size(1480, 650),
         };
 
         var editableRules = new BindingList<TrainerMoveRule>(
@@ -205,30 +205,29 @@ public static class TrainerMoveRulesDialog
         evPanel.Controls.Add(evValue);
         evPanel.Controls.Add(applyEVs);
         evPanel.Controls.Add(clearEVs);
-        var note = new Label
-        {
-            Dock = DockStyle.Bottom,
-            Height = 72,
-            TextAlign = ContentAlignment.MiddleLeft,
-            Padding = new Padding(8, 0, 8, 0),
-            Text = "Strong Stat compares base Attack vs Sp. Attack. If the difference is greater than Tolerance, the PokÃ©mon uses only Physical or Special damaging moves. If the difference is within Tolerance, both categories are allowed. Allow Status is enabled by default. Better Movesets forces the improved moveset builder for Use-checked trainers even when the global Better Movesets checkbox is off. Min Power 0 disables minimum power filtering. Smart Items gives competitive held items only to Use-checked trainers. EVs -1 disables EV override; otherwise the selected value is applied to all EV stats of every PokÃ©mon in that trainer battle. The EV buttons apply to every trainer with Use checked, regardless of selected rows. The EV buttons apply to every trainer with Use checked, regardless of selected rows.",
-        };
+        // Long explanatory text was removed from the dialog; the documentation now covers these options.
 
         var buttons = new FlowLayoutPanel
         {
             Dock = DockStyle.Bottom,
-            Height = 42,
-            FlowDirection = FlowDirection.RightToLeft,
+            Height = 68,
+            FlowDirection = FlowDirection.LeftToRight,
             Padding = new Padding(6),
         };
 
-        var ok = new Button { Text = "OK", Width = 80 };
-        var cancel = new Button { Text = "Cancel", Width = 80, DialogResult = DialogResult.Cancel };
-        var selectAll = new Button { Text = "Select All", Width = 90 };
-        var selectNone = new Button { Text = "Select None", Width = 90 };
-        var allowStatusAll = new Button { Text = "Allow Status All", Width = 120 };
-        var betterMovesetsAll = new Button { Text = "Better Movesets All", Width = 135 };
-        var betterMovesetsNone = new Button { Text = "Better Movesets None", Width = 145 };
+        var ok = new Button { Text = "OK", Width = 85 };
+        var cancel = new Button { Text = "Cancel", Width = 85, DialogResult = DialogResult.Cancel };
+        var selectAll = new Button { Text = "Select All", Width = 96 };
+        var selectNone = new Button { Text = "Select None", Width = 104 };
+        var allowStatusAll = new Button { Text = "Allow Status All", Width = 122 };
+        var allowStatusNone = new Button { Text = "Allow Status None", Width = 135 };
+        var betterMovesetsAll = new Button { Text = "Better Movesets All", Width = 145 };
+        var betterMovesetsNone = new Button { Text = "Better Movesets None", Width = 158 };
+        var smartItemsAll = new Button { Text = "Smart Items All", Width = 124 };
+        var smartItemsNone = new Button { Text = "Smart Items None", Width = 138 };
+
+        foreach (var button in new[] { ok, cancel, selectAll, selectNone, allowStatusAll, allowStatusNone, betterMovesetsAll, betterMovesetsNone, smartItemsAll, smartItemsNone })
+            StyleButton(button);
 
         selectAll.Click += (_, _) => SetSelected(editableRules, true);
         selectNone.Click += (_, _) => SetSelected(editableRules, false);
@@ -240,6 +239,14 @@ public static class TrainerMoveRulesDialog
         };
         betterMovesetsAll.Click += (_, _) => SetBetterMovesets(editableRules, true);
         betterMovesetsNone.Click += (_, _) => SetBetterMovesets(editableRules, false);
+        smartItemsAll.Click += (_, _) => SetSmartItems(editableRules, true);
+        smartItemsNone.Click += (_, _) => SetSmartItems(editableRules, false);
+        allowStatusNone.Click += (_, _) =>
+        {
+            foreach (var rule in editableRules.Where(r => r.Enabled))
+                rule.AllowStatusMoves = false;
+            editableRules.ResetBindings();
+        };
 
         List<TrainerMoveRule>? acceptedRules = null;
 
@@ -260,17 +267,19 @@ public static class TrainerMoveRulesDialog
             form.Close();
         };
 
-        buttons.Controls.Add(ok);
-        buttons.Controls.Add(cancel);
-        buttons.Controls.Add(betterMovesetsNone);
-        buttons.Controls.Add(betterMovesetsAll);
-        buttons.Controls.Add(allowStatusAll);
-        buttons.Controls.Add(selectNone);
         buttons.Controls.Add(selectAll);
+        buttons.Controls.Add(selectNone);
+        buttons.Controls.Add(allowStatusAll);
+        buttons.Controls.Add(allowStatusNone);
+        buttons.Controls.Add(betterMovesetsAll);
+        buttons.Controls.Add(betterMovesetsNone);
+        buttons.Controls.Add(smartItemsAll);
+        buttons.Controls.Add(smartItemsNone);
+        buttons.Controls.Add(cancel);
+        buttons.Controls.Add(ok);
 
         form.Controls.Add(grid);
         form.Controls.Add(evPanel);
-        form.Controls.Add(note);
         form.Controls.Add(buttons);
 
         if (form.ShowDialog(owner) != DialogResult.OK || acceptedRules is null)
@@ -292,6 +301,23 @@ public static class TrainerMoveRulesDialog
         foreach (var rule in rules.Where(r => r.Enabled))
             rule.BetterMovesets = value;
         rules.ResetBindings();
+    }
+
+    private static void SetSmartItems(BindingList<TrainerMoveRule> rules, bool value)
+    {
+        foreach (var rule in rules.Where(r => r.Enabled))
+            rule.SmartItems = value;
+        rules.ResetBindings();
+    }
+
+    private static void StyleButton(Button button)
+    {
+        button.FlatStyle = FlatStyle.Flat;
+        button.BackColor = Color.White;
+        button.ForeColor = Color.FromArgb(32, 38, 46);
+        button.FlatAppearance.BorderColor = Color.FromArgb(203, 213, 225);
+        button.FlatAppearance.MouseOverBackColor = Color.FromArgb(241, 245, 249);
+        button.Height = Math.Max(button.Height, 30);
     }
 
     private static bool Validate(List<TrainerMoveRule> rules)

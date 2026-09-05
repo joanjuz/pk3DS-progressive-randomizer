@@ -1,6 +1,7 @@
 using pk3DS.Core;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using pk3DS.Core.Randomizers;
@@ -20,6 +21,7 @@ public partial class TrainerRand : Form
         trClassnorep.AddRange(trClass.Where(tclass => !trClassnorep.Contains(tclass) && !tclass.StartsWith("[~")));
         trClassnorep.Sort();
         RandSettings.GetFormSettings(this, Controls);
+        ConfigureModernTrainerLayout();
 
     }
     private void ShowManualBSTDialog()
@@ -225,6 +227,204 @@ public partial class TrainerRand : Form
     private int PreviousTrainerGap = 2;
     private decimal RegularTrainerCurvePower = 1.6m;
     private bool GuaranteeMegaInImportantBattles = false;
+
+
+    private void ConfigureModernTrainerLayout()
+    {
+        SuspendLayout();
+
+        Text = "Trainer Randomizer";
+        FormBorderStyle = FormBorderStyle.Sizable;
+        MaximizeBox = true;
+        AutoScroll = true;
+        MinimumSize = new Size(1000, 730);
+        MaximumSize = Size.Empty;
+        ClientSize = new Size(1020, 760);
+        BackColor = ModernUI.Background;
+
+        const int margin = 16;
+        const int gap = 14;
+        int columnWidth = (ClientSize.Width - margin * 2 - gap) / 2;
+
+        var title = new Label
+        {
+            Text = "Trainer Randomizer",
+            AutoSize = true,
+            Font = new Font("Segoe UI Semibold", 13F, FontStyle.Bold),
+            Location = new Point(margin, 12),
+        };
+
+        var subtitle = new Label
+        {
+            Text = "Configure Pokémon, progression, movesets, held items, and difficulty rules.",
+            AutoSize = true,
+            ForeColor = ModernUI.MutedText,
+            Location = new Point(margin, 38),
+        };
+
+        Controls.Add(title);
+        Controls.Add(subtitle);
+
+        var pokemon = CreateSection("Pokémon pool & progression", margin, 70, columnWidth, 340);
+        var moves = CreateSection("Movesets", margin + columnWidth + gap, 70, columnWidth, 340);
+        var items = CreateSection("Held items & battle stats", margin, 428, columnWidth, 226);
+        var trainer = CreateSection("Trainer class, gifts & AI", margin + columnWidth + gap, 428, columnWidth, 226);
+
+        AddSection(pokemon);
+        AddSection(moves);
+        AddSection(items);
+        AddSection(trainer);
+
+        LayoutPokemonSection(pokemon);
+        LayoutMovesSection(moves);
+        LayoutItemsSection(items);
+        LayoutTrainerSection(trainer);
+
+        B_OK.Text = "Apply";
+        B_OK.Size = new Size(96, 32);
+        B_OK.Location = new Point(ClientSize.Width - margin - B_OK.Width, ClientSize.Height - 48);
+        B_OK.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+
+        B_Cancel.Size = new Size(96, 32);
+        B_Cancel.Location = new Point(B_OK.Left - 106, B_OK.Top);
+        B_Cancel.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
+
+        Controls.Add(B_OK);
+        Controls.Add(B_Cancel);
+        B_OK.BringToFront();
+        B_Cancel.BringToFront();
+
+        ModernUI.Apply(this);
+        ResumeLayout(false);
+    }
+
+    private static GroupBox CreateSection(string text, int x, int y, int width, int height) => new()
+    {
+        Text = text,
+        Location = new Point(x, y),
+        Size = new Size(width, height),
+        Anchor = AnchorStyles.Top | AnchorStyles.Left,
+        BackColor = ModernUI.Background,
+        Padding = new Padding(12),
+    };
+
+    private void AddSection(GroupBox section)
+    {
+        Controls.Add(section);
+        section.BringToFront();
+    }
+
+    private static void Move(Control parent, Control control, int x, int y, int width = 0, int height = 0)
+    {
+        if (control.Parent != null)
+            control.Parent.Controls.Remove(control);
+
+        parent.Controls.Add(control);
+        control.Location = new Point(x, y);
+        control.Anchor = AnchorStyles.Top | AnchorStyles.Left;
+
+        if (width > 0)
+            control.Width = width;
+        if (height > 0)
+            control.Height = height;
+    }
+
+    private static Label SmallLabel(string text, int x, int y) => new()
+    {
+        Text = text,
+        AutoSize = true,
+        ForeColor = ModernUI.MutedText,
+        Location = new Point(x, y),
+    };
+
+    private void LayoutPokemonSection(GroupBox section)
+    {
+        Move(section, CHK_RandomPKM, 16, 24);
+        Move(section, GB_Tweak, 16, 50, section.Width - 32, 150);
+        GB_Tweak.Text = "Species sources";
+        GB_Tweak.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+
+        CHK_G1.Location = new Point(12, 24);
+        CHK_G2.Location = new Point(12, 46);
+        CHK_G3.Location = new Point(12, 68);
+        CHK_G4.Location = new Point(84, 24);
+        CHK_G5.Location = new Point(84, 46);
+        CHK_G6.Location = new Point(84, 68);
+
+        CHK_L.Location = new Point(164, 24);
+        CHK_E.Location = new Point(164, 46);
+        CHK_BST.Location = new Point(292, 24);
+        CHK_ProgressiveBST.Location = new Point(292, 52);
+        B_SetManualBST.Location = new Point(292, 84);
+        B_SetManualBST.Size = new Size(132, 30);
+
+        Move(section, CHK_StoryMEvos, 16, 214, 260);
+        Move(section, CHK_RandomMegaForm, 16, 244, 200);
+        Move(section, CHK_ForceFullyEvolved, 16, 274, 180);
+        Move(section, NUD_ForceFullyEvolved, 190, 272, 52);
+
+        Move(section, CHK_TypeTheme, 270, 214, 190);
+        Move(section, CHK_GymTrainers, 270, 244, 190);
+        Move(section, CHK_GymE4Only, 270, 274, 190);
+    }
+
+    private void LayoutMovesSection(GroupBox section)
+    {
+        L_Moves.Text = "Source";
+        Move(section, L_Moves, 16, 28);
+        Move(section, CB_Moves, 100, 24, 160);
+        Move(section, CHK_BetterMovesets, 16, 58);
+        Move(section, B_SetTrainerMoveRules, 230, 52, 170, 32);
+
+        section.Controls.Add(SmallLabel("Quality filters", 16, 96));
+        Move(section, CHK_ForceHighPower, 16, 122);
+        Move(section, NUD_ForceHighPower, 290, 120, 52);
+        Move(section, CHK_NoFixedDamage, 16, 148);
+        Move(section, CHK_Damage, 16, 174);
+        Move(section, NUD_Damage, 290, 172, 52);
+        Move(section, CHK_STAB, 16, 200);
+        Move(section, NUD_STAB, 290, 198, 52);
+    }
+
+    private void LayoutItemsSection(GroupBox section)
+    {
+        Move(section, CHK_RandomItems, 16, 28);
+        Move(section, CHK_SmartHeldItems, 16, 56);
+        Move(section, CHK_ItemClause, 16, 84);
+        Move(section, CB_SmartHeldItemMode, 164, 52, 150);
+
+        section.Controls.Add(SmallLabel("Stats", 16, 118));
+        Move(section, CHK_RandomAbilities, 16, 142);
+        Move(section, CHK_MaxDiffPKM, 250, 142);
+    }
+
+    private void LayoutTrainerSection(GroupBox section)
+    {
+        section.Controls.Add(SmallLabel("Levels", 16, 28));
+        Move(section, CHK_Level, 16, 52);
+        Move(section, NUD_Level, 168, 50, 60);
+        Move(section, CHK_LevelCaps, 232, 52);
+        Move(section, B_SetLevelCaps, 340, 46, 110, 32);
+
+        Move(section, CHK_RandomDoubleBattles, 16, 84);
+        Move(section, NUD_DoubleBattleChance, 168, 82, 60);
+
+        section.Controls.Add(SmallLabel("Team size", 16, 116));
+        Move(section, L_MinPKM, 16, 138, 58);
+        Move(section, NUD_RMin, 76, 138, 45);
+        Move(section, L_MaxPKM, 132, 138, 58);
+        Move(section, NUD_RMax, 192, 138, 45);
+        Move(section, CHK_6PKM, 264, 138);
+
+        Move(section, CHK_RandomClass, 16, 164);
+        Move(section, CHK_IgnoreSpecialClass, 174, 164);
+        Move(section, CHK_OnlySingles, 328, 164);
+
+        Move(section, CHK_RandomGift, 16, 190);
+        Move(section, NUD_GiftPercent, 206, 188, 58);
+        Move(section, label1, 270, 191);
+        Move(section, CHK_MaxDiffAI, 318, 190);
+    }
 
 
     private void B_Close_Click(object sender, EventArgs e)

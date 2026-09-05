@@ -329,3 +329,12 @@ foreach ($line in $ignoreLines) {
         Add-Content .gitignore $line
     }
 }*.bak_v*
+
+# Local reverse-engineering / temporary files
+*.bak*
+*.before_*
+*.broken_*
+*.failed_*
+/Battle.cro*.cro
+/*.zip
+/release_v*/

@@ -30,9 +30,10 @@
 #   Stat1/Stat1Change/Stat1Chance ... Stat3/Stat3Change/Stat3Chance
 #   ClearFlags, SetFlags, UnsetFlags
 #   KingShieldAttackMinusOne   = true/false; applies the custom King's Shield -1 Attack patch when supported
+#   BattlePatch                = optional named battle patch. Example: Gen7KingShieldMinusOne
 #   Notes                      = free text for documentation
 #
 # Example, commented out:
 # 588,,Status,,,,5,,,,,,,,,,,,,,,true,,,,Attack,-1,100,,,,,,,,,,,,,true,King's Shield example
 #
-Move,Type,Category,Quality,Power,Accuracy,PP,Priority,HitMin,HitMax,CriticalStage,Flinch,Effect,Param0x0B,Inflict,InflictChance,Heal,Recoil,TurnMin,TurnMax,Targeting,ClearStatEffects,UserStat,UserStatChange,UserStatChance,TargetStat,TargetStatChange,TargetStatChance,Stat1,Stat1Change,Stat1Chance,Stat2,Stat2Change,Stat2Chance,Stat3,Stat3Change,Stat3Chance,ClearFlags,SetFlags,UnsetFlags,KingShieldAttackMinusOne,Notes
+Move,Type,Category,Quality,Power,Accuracy,PP,Priority,HitMin,HitMax,CriticalStage,Flinch,Effect,Param0x0B,Inflict,InflictChance,Heal,Recoil,TurnMin,TurnMax,Targeting,ClearStatEffects,UserStat,UserStatChange,UserStatChance,TargetStat,TargetStatChange,TargetStatChance,Stat1,Stat1Change,Stat1Chance,Stat2,Stat2Change,Stat2Chance,Stat3,Stat3Change,Stat3Chance,ClearFlags,SetFlags,UnsetFlags,KingShieldAttackMinusOne,BattlePatch,Notes

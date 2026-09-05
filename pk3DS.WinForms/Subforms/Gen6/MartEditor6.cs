@@ -36,9 +36,9 @@ public partial class MartEditor6 : Form
         B_AddRareCandies = new Button
         {
             Name = "B_AddRareCandies",
-            Size = new System.Drawing.Size(120, 23),
+            Size = new System.Drawing.Size(150, 23),
             TabIndex = 305,
-            Text = "Add rare candies",
+            Text = "Add Rare Candies",
             UseVisualStyleBackColor = true,
         };
 

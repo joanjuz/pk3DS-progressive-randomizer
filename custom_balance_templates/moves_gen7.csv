@@ -1,38 +1,69 @@
-# Custom Move Balance Template
+# Custom Move Balance Template - Gen7 active balance preset
 # ------------------------------------------------------------
-# This CSV controls move-data edits applied by Move Editor -> Balance moves.
+# Lines starting with # are comments.
+# Empty cells keep the current value.
+# The normal CSV fields are applied by Move Editor -> Balance moves.
+# Rows near the bottom marked SPECIAL CHECK may need an additional Battle.cro/code.bin patch
+# if the effect is hardcoded by the game.
 #
-# Important:
-#   Keep the header row below.
-#   Lines starting with # are comments.
-#   Leave cells empty when you do not want to change that value.
-#   This template contains no active move rows by default.
+# BattlePatch:
+#   Gen7KingShieldMinusOne is currently implemented and confirmed for Escudo Real.
+#   Other special moves are kept at the bottom for later implementation/testing.
 #
-# Main columns:
-#   Move                       = move ID or move name
-#   Type                       = new move type
-#   Category                   = Physical, Special or Status
-#   Quality                    = optional quality/grouping text
-#   Power, Accuracy, PP         = basic move values
-#   Priority                   = move priority
-#   HitMin, HitMax              = multi-hit values
-#   CriticalStage               = critical-hit stage
-#   Flinch                     = flinch chance
-#   Effect                     = raw effect ID
-#   Param0x0B                  = raw effect parameter at 0x0B
-#   Inflict, InflictChance      = status condition and chance
-#   Heal, Recoil                = heal/recoil parameters when supported by the effect
-#   TurnMin, TurnMax            = turn-duration parameters when supported by the effect
-#   Targeting                  = raw targeting mode
-#   ClearStatEffects           = true/false; clears existing stat-change fields
-#   UserStat/UserStatChange/UserStatChance
-#   TargetStat/TargetStatChange/TargetStatChance
-#   Stat1/Stat1Change/Stat1Chance ... Stat3/Stat3Change/Stat3Chance
-#   ClearFlags, SetFlags, UnsetFlags
-#   KingShieldAttackMinusOne   = true/false; applies the custom King's Shield -1 Attack patch when supported
-#   Notes                      = free text for documentation
-#
-# Example, commented out:
-# 588,,Status,,,,5,,,,,,,,,,,,,,,true,,,,Attack,-1,100,,,,,,,,,,,,,true,King's Shield example
-#
-Move,Type,Category,Quality,Power,Accuracy,PP,Priority,HitMin,HitMax,CriticalStage,Flinch,Effect,Param0x0B,Inflict,InflictChance,Heal,Recoil,TurnMin,TurnMax,Targeting,ClearStatEffects,UserStat,UserStatChange,UserStatChance,TargetStat,TargetStatChange,TargetStatChance,Stat1,Stat1Change,Stat1Chance,Stat2,Stat2Change,Stat2Chance,Stat3,Stat3Change,Stat3Chance,ClearFlags,SetFlags,UnsetFlags,KingShieldAttackMinusOne,Notes
+Move,Type,Category,Quality,Power,Accuracy,PP,Priority,HitMin,HitMax,CriticalStage,Flinch,Effect,Param0x0B,Inflict,InflictChance,Heal,Recoil,TurnMin,TurnMax,Targeting,ClearStatEffects,UserStat,UserStatChange,UserStatChance,TargetStat,TargetStatChange,TargetStatChance,Stat1,Stat1Change,Stat1Chance,Stat2,Stat2Change,Stat2Chance,Stat3,Stat3Change,Stat3Chance,ClearFlags,SetFlags,UnsetFlags,KingShieldAttackMinusOne,BattlePatch,Notes,ZEffect
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+# Regular / CSV-only or mostly CSV-driven changes
+79,,Status,,,70,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,Somnifero / Sleep Powder: 70% accuracy
+601,,,,,,,,,,,,,,,,,,,,,true,,,,,,,Speed,-1,100,Special Attack,2,100,Special Defense,2,100,,,,,,"Geomancy / Geocontrol: +2 SpA, +2 SpD, -1 Speed"
+6,,Physical,,25,,40,,,,,40,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,"Dia de Pago / Pay Day: 25 power, 40 PP, 40% flinch"
+336,,Status,,,,,,,,,,,,,,,,,,,true,Attack,3,100,,,,,,,,,,,,,,,,,,Aullido / Howl: +3 Attack
+577,,Special,,60,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,Beso Drenaje / Draining Kiss: 60 power
+72,,Special,,60,,,,,,,,,,,,75,,,,,,,,,,,,,,,,,,,,,,,,,,"Megaagotar / Mega Drain: 60 power, 75% recovery"
+202,,Special,,80,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,Gigadrenado / Giga Drain: 80 power
+182,,,,,,5,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,Proteccion / Protect: 5 PP
+596,,,,,,5,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,Barrera Espinosa / Spiky Shield: 5 PP
+105,,,,,,5,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,Recuperacion / Recover: 5 PP
+208,,,,,,5,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,Batido / Milk Drink: 5 PP
+355,,,,,,5,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,Respiro / Roost: 5 PP
+505,,,,,,5,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,Auxilio / Heal Pulse: 5 PP
+303,,,,,,5,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,Relajo / Slack Off: 5 PP
+135,,,,,,5,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,Amortiguador / Soft-Boiled: 5 PP
+15,Grass,Physical,,70,100,,,,,1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,"Corte / Cut: Grass, 70 power, 100 acc, +1 crit"
+19,,Physical,,130,100,,,,,,,,,,,,-33,,,,,,,,,,,,,,,,,,,,,,,,,"Vuelo / Fly: 130 power, 100 acc, -33% recoil"
+70,,Physical,,30,,,,,,,,,1,Confusion,30,,,,,,,,,,,,,,,,,,,,,,,,,,,"Fuerza / Strength: 30 power, 30% confusion, Param0x0B=1"
+249,,Physical,,60,,,,,,,,,,,,,,,,,,,,,Defense,-1,100,,,,,,,,,,,,,,,"Golpe Roca / Rock Smash: 60 power, always lowers Defense"
+291,,Physical,,130,,,,,,,,,,,,,-33,,,,,,,,,,,,,,,,,,,,,,,,,"Buceo / Dive: 130 power, -33% recoil"
+594,Water,Special,,25,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,Shuriken de Agua / Water Shuriken: 25 power; use 20 if preferred
+468,,Status,,,,,,,,,,,,,,,,,,Ally,,,,,,,,,,,,,,,,,,,,,,Afilagarras / Hone Claws: targets ally
+526,,Status,,,,,,,,,,,,,,,,,,Single,,,,,,,,,,,,,,,,,,,,,,Avivar / Work Up: targeteable
+674,,Status,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,Speed,1,100,,,,,,Pinon Auxiliar / Gear Up: also +1 Speed
+106,,Status,,,,,,,,,,,,,,,,,,Ally,,,,,,,,,,,,,,,,,,,,,,Fortaleza / Harden: targets ally
+590,,Status,,,,,,,,,,,,,,,,,,Ally,true,,,,Special Attack,1,100,,,,,,,,,,,,,,,"Confidencia / Confide: targets ally, +1 Sp. Atk"
+589,,Status,,,,,,,,,,,,,,,,,,AllFoes,,,,,,,,,,,,,,,,,,,,,,Camaraderia / Play Nice: affects both foes
+485,,Special,,150,,,,,,,,,,,,,,,,AllPokemon,,,,,,,,,,,,,,,,,,,,,,"Sincrorruido / Synchronoise: 150 power, affects all Pokemon"
+161,,Special,,,,,,,,,,,,,30,,,,,,,,,,,,,,,,,,,,,,,,,,,Triataque / Tri Attack: 30% secondary effect
+600,,Status,,,,,,,,,,,,,,,,,,AllPokemon,,,,,,,,,,,,,,,,,,,,,,Polvo Explosivo / Powder: affects both/all
+184,,Status,,,,,1,,,,,,,,,,,,,,true,,,,Speed,-1,100,,,,,,,,,,,,,,,"Cara Susto / Scary Face: +1 priority, -1 Speed"
+153,,Special,,250,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,"Explosion: Special, 250 power"
+120,,Physical,,250,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,"Autodestruccion / Self-Destruct: Physical, 250 power"
+693,,Physical,,25,,,,2,5,,,,,,,,,,,Single,,,,,,,,,,,,,,,,,,,,,,"Giro Vil / Brutal Swing: single target, Rock Blast-like 2-5 hits"
+190,,Special,,,90,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,Pulpocanon / Octazooka: 90 accuracy
+340,,Physical,,,100,,,,,,,,,Paralyze,40,,,,,,,,,,,,,,,,,,,,,,,,,,,"Bote / Bounce: 100 accuracy, 40% paralysis"
+
+# Special / hardcoded or behavior-check changes last
+50,,Status,,,,,,,,,,,,,,,,4,4,AllFoes,,,,,,,,,,,,,,,,,,,,,,Anulacion / Disable: affects both foes; fixed duration 4 turns,
+588,,Status,,,,5,,,,,,,,,,,,,,,true,,,,,,,,,,,,,,,,,,,true,Gen7KingShieldMinusOne,SPECIAL ACTIVE: King's Shield / Escudo Real: Attack -1
+148,Electric,Status,,,70,5,,,,,,,177,Paralyze,100,,,,,AllFoes,,,,,Evasion,-1,100,,,,,,,,,,,,,,,"SPECIAL CHECK: Destello / Flash: Electric, all foes, paralysis + -1 evasion, Param0x0B=0xB1"
+346,,Status,,,,,,,,,,,100,,,,,,,,,,,,,,,,,,,,,,,,,,,,,SPECIAL CHECK: Hidrochorro / Water Sport: Fire damage reduction parameter to 100
+300,,Status,,,,,,,,,,,100,,,,,,,,,,,,,,,,,,,,,,,,,,,,,SPECIAL CHECK: Chapoteo Lodo / Mud Sport: Electric damage reduction parameter to 100
+381,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,Gen7LuckyChantCritBoost,Conjuro / Lucky Chant: Battle.cro v17 only; preserve vanilla move data; protected side +1 critical stage; duration 8 turns
+293,,Status,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,"Camuflaje / Camouflage: Z-Move bonus +1 Attack, Defense, Sp. Atk, Sp. Def and Speed (ZEffect 22); normal Camouflage unchanged",22
+54,,Status,,,,,3,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,Gen7MistOwnerActiveV5762,Neblina / Mist: +3 priority; remains active while the original user stays active; ally switching does not end it; owner switch/faint ends it; immediate recast transfers ownership; Mist itself gives no critical-stage boost,
+108,,Status,13,,,,0,,,,,111,,,,,,,,Single,true,,,,,,,,,,,,,,,,,,,,Gen7SmokescreenV82,Pantalla de Humo / Smokescreen: first-active-turn self-protection + selected target Accuracy -1; doubles-safe private descriptors (v8.2)
+277,,Status,,,,,,,,,,,,,,,,3,3,,,,,,,,,,,,,,,,,,,,,,,SPECIAL CHECK: Capa Magica / Magic Coat: 3 turns if effect reads turn fields
+96,,Status,13,,,,,,,,,399,,None,0,0,,,,Single,true,,,,,,,,,,,,,,,,,,,,Gen7MeditateV73,Meditacion / Meditate: target status cleanse +1 Attack (v7.3)
+563,Ground,Status,,0,101,10,,,,,,339,,,,25,,,,,true,,,,,,,,,,,,,,,,,,,,,"SPECIAL CHECK: Fertilizante / Rototiller: heal 25%, no stat boosts"
+587,Fairy,Status,13,,,,,,,,,294,,,,,,,,AllPokemon,,,,,,,,,,,,,,,,,,,,,Gen7FairyLockAllFairyV11,Cerrojo Feerico / Fairy Lock: all active Pokemon become pure Fairy (v11)
+
+193,,Status,,,,,,,,,,,,,,,,,,Self,true,,,,,,,Attack,1,100,Defense,1,100,Speed,1,100,,,,,,"Profecia / Foresight: self-target; +1 Attack, +1 Defense and +1 Speed",
+171,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,Gen7NightmareSleepV76,Pesadilla / Nightmare: target awake -> stock Sleep only; target already asleep -> vanilla Nightmare.,

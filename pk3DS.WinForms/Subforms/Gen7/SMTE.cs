@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -89,6 +89,7 @@ public partial class SMTE : Form
         AddLevelCapControls();
         FixGen7TrainerOptionsLayout();
         AddBanBadItemsControl();
+        PlaceGen7ImplementedOptionsInRulesTab();
         foreach (var pb in pba)
             pb.Click += ClickSlot;
 
@@ -713,8 +714,8 @@ public partial class SMTE : Form
 
         CB_Gender.Items.Clear();
         CB_Gender.Items.Add("- / Genderless/Random");
-        CB_Gender.Items.Add("♂ / Male");
-        CB_Gender.Items.Add("♀ / Female");
+        CB_Gender.Items.Add("â™‚ / Male");
+        CB_Gender.Items.Add("â™€ / Female");
 
         CB_Forme.Items.Add("");
 
@@ -2015,7 +2016,7 @@ public partial class SMTE : Form
 
             var rulesTab = TC_rand.TabPages
                 .Cast<TabPage>()
-                .FirstOrDefault(t => t.Name == "Tab_TrainerRulesCustom");
+                .FirstOrDefault(t => t.Name == "Tab_TrainerRulesCustom" || t.Text == "Rules");
 
             if (rulesTab is null)
             {
@@ -2081,15 +2082,7 @@ public partial class SMTE : Form
                 rulesTab.Controls.Add(percent);
             }
 
-            var note = new Label
-            {
-                AutoSize = false,
-                Location = new Point(12, 82),
-                Size = new Size(315, 42),
-                Text = "Caps and Move Rules apply to important trainers. Double battles only converts regular single battles.",
-            };
-
-            rulesTab.Controls.Add(note);
+            // Keep this tab compact. Detailed behavior is covered in documentation.
         }
         catch
         {
@@ -2104,7 +2097,6 @@ public partial class SMTE : Form
             CHK_BanBadItems ??= new CheckBox
             {
                 AutoSize = true,
-                Location = new Point(CHK_RandomItems.Left, CHK_RandomItems.Bottom + 6),
                 Name = "CHK_BanBadItems",
                 TabIndex = 1012,
                 Text = "Ban Bad Items",
@@ -2118,9 +2110,15 @@ public partial class SMTE : Form
                 CHK_BanBadItems.Enabled = CHK_RandomItems.Checked;
             };
 
-            Control parent = CHK_RandomItems.Parent;
-            parent ??= Tab_PKM2;
-            parent ??= this;
+            Control parent = CB_Moves?.Parent;
+            if (parent is null)
+                parent = Tab_Rand;
+            if (parent is null)
+                parent = this;
+
+            CHK_BanBadItems.Location = parent is TabPage
+                ? new Point(12, 84)
+                : new Point(CHK_RandomItems.Left, CHK_RandomItems.Bottom + 6);
 
             if (!parent.Controls.Contains(CHK_BanBadItems))
                 parent.Controls.Add(CHK_BanBadItems);
@@ -2130,6 +2128,94 @@ public partial class SMTE : Form
         catch
         {
             // UI-only helper.
+        }
+    }
+    private void PlaceGen7ImplementedOptionsInRulesTab()
+    {
+        try
+        {
+            if (TC_rand is null)
+                return;
+
+            var rulesTab = TC_rand.TabPages
+                .Cast<TabPage>()
+                .FirstOrDefault(t => t.Name == "Tab_TrainerRulesCustom" || t.Text == "Rules");
+
+            if (rulesTab is null)
+            {
+                rulesTab = new TabPage
+                {
+                    Name = "Tab_TrainerRulesCustom",
+                    Text = "Rules",
+                    UseVisualStyleBackColor = true,
+                };
+                TC_rand.TabPages.Add(rulesTab);
+            }
+
+            void MoveToRules(Control control, int x, int y, int width = 0, int height = 0)
+            {
+                if (control is null)
+                    return;
+
+                if (control.Parent != rulesTab)
+                {
+                    control.Parent?.Controls.Remove(control);
+                    rulesTab.Controls.Add(control);
+                }
+
+                if (width > 0 || height > 0)
+                    control.Size = new Size(width > 0 ? width : control.Width, height > 0 ? height : control.Height);
+
+                control.Location = new Point(x, y);
+                control.BringToFront();
+            }
+
+            var randomItems = Controls.Find("CHK_RandomItems", true).FirstOrDefault() as CheckBox;
+            var maxIvs = Controls.Find("CHK_MaxDiffPKM", true).FirstOrDefault() as CheckBox;
+            var maxAI = Controls.Find("CHK_MaxAI", true).FirstOrDefault() as CheckBox;
+
+            // Difficulty / caps.
+            MoveToRules(CHK_LevelCaps, 12, 14);
+            MoveToRules(B_SetLevelCaps, 115, 10, 62, 24);
+            MoveToRules(B_SetTrainerMoveRules, 185, 10, 70, 24);
+            MoveToRules(CHK_RandomDoubleBattles, 12, 44);
+            MoveToRules(NUD_DoubleBattleChance, 145, 42, 50, 22);
+
+            var percent = Controls.Find("L_DoubleBattlePercent", true).FirstOrDefault() as Label;
+            if (percent is not null)
+            {
+                percent.Text = "%";
+                percent.AutoSize = true;
+                MoveToRules(percent, 200, 46);
+            }
+
+            // Custom features implemented in this fork. Keep them in Rules instead of Stats/Moves.
+            MoveToRules(CHK_BetterMovesets, 12, 82);
+            MoveToRules(randomItems, 12, 112);
+            MoveToRules(CHK_SmartHeldItems, 32, 140);
+            MoveToRules(CB_SmartHeldItemMode, 145, 137, 110, 23);
+            MoveToRules(CHK_BanBadItems, 32, 168);
+            MoveToRules(CHK_ItemClause, 32, 196);
+
+            MoveToRules(maxIvs, 285, 112);
+            MoveToRules(maxAI, 285, 140);
+
+            // Keep dependencies active after moving controls.
+            if (randomItems is not null)
+            {
+                CHK_SmartHeldItems.Enabled = randomItems.Checked;
+                CB_SmartHeldItemMode.Enabled = randomItems.Checked;
+                CHK_ItemClause.Enabled = randomItems.Checked;
+                CHK_BanBadItems.Enabled = randomItems.Checked;
+            }
+
+            // Give the Rules tab enough room so nothing gets clipped.
+            rulesTab.AutoScroll = true;
+            rulesTab.MinimumSize = new Size(Math.Max(rulesTab.MinimumSize.Width, 390), 240);
+        }
+        catch
+        {
+            // UI-only adjustment.
         }
     }
     private void AddProgressiveBSTControls()
@@ -2388,3 +2474,4 @@ public partial class SMTE : Form
         return stones;
     }
 }
+

@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Specialized;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace pk3DS.WinForms;
@@ -12,6 +14,7 @@ public partial class Patch : Form
     public Patch()
     {
         InitializeComponent();
+        ConfigureModernLayout();
         RTB_GARCs.Clear();
         CHKLB_GARCs.Items.Clear();
         foreach (string s in Main.Config.Files.Select(file => file.Name))
@@ -19,6 +22,80 @@ public partial class Patch : Form
 
         if (File.Exists("patch.ini"))
             RTB_GARCs.Lines = File.ReadAllLines("patch.txt", Encoding.Unicode);
+    }
+
+    private void ConfigureModernLayout()
+    {
+        Text = "Patch Manager · Utilities";
+        MinimumSize = new Size(680, 430);
+        ClientSize = new Size(680, 430);
+
+        CHKLB_GARCs.Location = new Point(16, 38);
+        CHKLB_GARCs.Size = new Size(210, 300);
+
+        var title = new Label
+        {
+            Text = "Patch Manager",
+            AutoSize = true,
+            Font = new Font("Segoe UI Semibold", 12F, FontStyle.Bold),
+            Location = new Point(16, 12),
+        };
+        Controls.Add(title);
+
+        label1.Location = new Point(248, 38);
+        textBox1.Location = new Point(248, 58);
+        textBox1.Width = 160;
+        CHK_Lang.Location = new Point(248, 90);
+
+        label2.Location = new Point(248, 122);
+        RTB_GARCs.Location = new Point(248, 142);
+        RTB_GARCs.Size = new Size(160, 196);
+
+        B_CheckAll.Location = new Point(16, 350);
+        B_CheckAll.Size = new Size(100, 30);
+        B_CheckNone.Location = new Point(126, 350);
+        B_CheckNone.Size = new Size(100, 30);
+
+        var fieldGroup = new GroupBox
+        {
+            Text = "Field Items",
+            Location = new Point(430, 38),
+            Size = new Size(230, 164),
+            Anchor = AnchorStyles.Top | AnchorStyles.Right,
+        };
+
+        var fieldInfo = new Label
+        {
+            Text = "Dump, shuffle, or randomize visible and hidden pickups using the field_items.txt template.",
+            Location = new Point(14, 26),
+            Size = new Size(198, 48),
+        };
+
+        Controls.Remove(B_DumpFieldItems);
+        Controls.Remove(B_RandomizeFieldItems);
+        B_DumpFieldItems.Location = new Point(14, 82);
+        B_DumpFieldItems.Size = new Size(198, 32);
+        B_RandomizeFieldItems.Location = new Point(14, 120);
+        B_RandomizeFieldItems.Size = new Size(198, 32);
+
+        fieldGroup.Controls.Add(fieldInfo);
+        fieldGroup.Controls.Add(B_DumpFieldItems);
+        fieldGroup.Controls.Add(B_RandomizeFieldItems);
+        Controls.Add(fieldGroup);
+
+        var rebuildGroup = new GroupBox
+        {
+            Text = "Build",
+            Location = new Point(430, 214),
+            Size = new Size(230, 92),
+            Anchor = AnchorStyles.Top | AnchorStyles.Right,
+        };
+
+        Controls.Remove(B_PatchCIA);
+        B_PatchCIA.Location = new Point(14, 34);
+        B_PatchCIA.Size = new Size(198, 32);
+        rebuildGroup.Controls.Add(B_PatchCIA);
+        Controls.Add(rebuildGroup);
     }
 
     internal static bool PatchExeFS(string path, string[] oldstr, string[] newstr, string oldROM, string newROM, ref string result, string outPath = null)
@@ -114,6 +191,67 @@ public partial class Patch : Form
         }
     }
 
+
+
+    private void B_DumpFieldItems_Click(object sender, EventArgs e)
+    {
+        try
+        {
+            var result = FieldItemDumper.DumpCsv();
+            using var sfd = new SaveFileDialog
+            {
+                Filter = "CSV files (*.csv)|*.csv|Text files (*.txt)|*.txt|All files (*.*)|*.*",
+                FileName = $"field_items_dump_{DateTime.Now:yyyyMMdd_HHmmss}.csv",
+            };
+
+            if (sfd.ShowDialog(this) != DialogResult.OK)
+                return;
+
+            File.WriteAllText(sfd.FileName, result.Csv, new UTF8Encoding(false));
+            WinFormsUtil.Alert($"Dumped {result.Count} field item entries.", sfd.FileName);
+        }
+        catch (Exception ex)
+        {
+            WinFormsUtil.Error("Could not dump field items:", ex.ToString());
+        }
+    }
+
+
+
+    private async void B_RandomizeFieldItems_Click(object sender, EventArgs e)
+    {
+        try
+        {
+            if (DialogResult.Yes != WinFormsUtil.Prompt(
+                MessageBoxButtons.YesNo,
+                "Randomize field items?",
+                "This will shuffle detected field items in-place.\n\nDefault safe mode:\n- Visible + hidden items are included.\n- Mega Stones are included in the normal item pool.\n- TMs/HMs are excluded because pk3DS already randomizes TMs.\n- Key/story-like items are excluded.\n- The suspicious repeated ORAS Potion tail is skipped.\n\nMake a backup before continuing."))
+                return;
+
+            SetFieldItemButtonsEnabled(false);
+            UseWaitCursor = true;
+            Text = "Patch Manager Â· Randomizing field items...";
+
+            var result = await Task.Run(FieldItemDumper.RandomizeDefault);
+            WinFormsUtil.Alert("Field items randomized.", result.Summary);
+        }
+        catch (Exception ex)
+        {
+            WinFormsUtil.Error("Could not randomize field items:", ex.ToString());
+        }
+        finally
+        {
+            UseWaitCursor = false;
+            Text = "Patch Manager Â· Utilities";
+            SetFieldItemButtonsEnabled(true);
+        }
+    }
+
+    private void SetFieldItemButtonsEnabled(bool enabled)
+    {
+        B_DumpFieldItems.Enabled = enabled;
+        B_RandomizeFieldItems.Enabled = enabled;
+    }
     private string[] GetGARCs()
     {
         var sc = new StringCollection();

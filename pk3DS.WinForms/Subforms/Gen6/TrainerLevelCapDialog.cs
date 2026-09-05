@@ -23,11 +23,11 @@ public static class TrainerLevelCapDialog
         {
             Text = "Trainer Level Caps",
             StartPosition = FormStartPosition.CenterParent,
-            Size = new Size(1080, 590),
+            Size = new Size(1100, 630),
             MinimizeBox = false,
             MaximizeBox = false,
             FormBorderStyle = FormBorderStyle.Sizable,
-            MinimumSize = new Size(980, 520),
+            MinimumSize = new Size(1040, 600),
         };
 
         var editableRules = new BindingList<TrainerLevelCapRule>(
@@ -154,15 +154,15 @@ public static class TrainerLevelCapDialog
         var buttons = new FlowLayoutPanel
         {
             Dock = DockStyle.Bottom,
-            Height = 42,
+            Height = 50,
             FlowDirection = FlowDirection.RightToLeft,
             Padding = new Padding(6),
         };
 
-        var ok = new Button { Text = "OK", Width = 80 };
-        var cancel = new Button { Text = "Cancel", Width = 80, DialogResult = DialogResult.Cancel };
-        var selectAll = new Button { Text = "Select All", Width = 90 };
-        var selectNone = new Button { Text = "Select None", Width = 90 };
+        var ok = new Button { Text = "OK", Width = 90 };
+        var cancel = new Button { Text = "Cancel", Width = 90, DialogResult = DialogResult.Cancel };
+        var selectAll = new Button { Text = "Select All", Width = 105 };
+        var selectNone = new Button { Text = "Select None", Width = 115 };
 
         selectAll.Click += (_, _) => SetSelected(editableRules, true);
         selectNone.Click += (_, _) => SetSelected(editableRules, false);

@@ -55,6 +55,9 @@ internal static class CustomBalanceTemplates
         public string SetFlags { get; init; } = string.Empty;
         public string UnsetFlags { get; init; } = string.Empty;
         public bool KingShieldAttackMinusOne { get; init; }
+
+        public int? ZEffect { get; init; }
+        public string BattlePatch { get; init; } = string.Empty;
     }
 
     internal sealed class EvolutionPatchRow
@@ -150,6 +153,9 @@ internal static class CustomBalanceTemplates
                 SetFlags = GetField(fields, header, -1, "SetFlags", "Flags", "AddFlags"),
                 UnsetFlags = GetField(fields, header, -1, "UnsetFlags", "RemoveFlags"),
                 KingShieldAttackMinusOne = ParseBool(GetField(fields, header, 9, "KingShieldAttackMinusOne")),
+
+                ZEffect = ParseNullableInt(GetField(fields, header, -1, "ZEffect", "ZMoveEffect", "ZStatusEffect")),
+                BattlePatch = GetField(fields, header, -1, "BattlePatch", "SpecialPatch", "BattleEffectPatch"),
             });
         }
 
@@ -221,14 +227,24 @@ internal static class CustomBalanceTemplates
     {
         string root = GetTemplateRoot();
         Directory.CreateDirectory(root);
+
+        string gen7Moves = Path.Combine(root, "moves_gen7.csv");
+
         WriteIfMissing(Path.Combine(root, "moves_gen6.csv"), ExampleMoves());
-        WriteIfMissing(Path.Combine(root, "moves_gen7.csv"), ExampleMoves());
+        WriteIfMissing(gen7Moves, ExampleMoves());
+        EnsureGen7NightmareSleepV76TemplateRow(gen7Moves);
+        EnsureGen7WishPivotTemplateRow(gen7Moves);
+        Gen7MeditateV73Patcher.EnsureTemplateRow(gen7Moves);
+        Gen7MistOwnerActivePatcher.EnsureTemplateRow(gen7Moves);
+        Gen7FairyLockV11Patcher.EnsureTemplateRow(gen7Moves);
         WriteIfMissing(Path.Combine(root, "evolutions_gen6.csv"), ExampleEvolutions());
         WriteIfMissing(Path.Combine(root, "evolutions_gen7.csv"), ExampleEvolutions());
-    }
+    
+        Gen7LuckyChantCritPatcher.EnsureTemplateRow(
+            Path.Combine(root, "moves_gen7.csv"));}
 
     private static string ExampleMoves() =>
-        "Move,Type,Category,Quality,Power,Accuracy,PP,Priority,HitMin,HitMax,CriticalStage,Flinch,Effect,Param0x0B,Inflict,InflictChance,Heal,Recoil,TurnMin,TurnMax,Targeting,ClearStatEffects,UserStat,UserStatChange,UserStatChance,TargetStat,TargetStatChange,TargetStatChance,Stat1,Stat1Change,Stat1Chance,Stat2,Stat2Change,Stat2Chance,Stat3,Stat3Change,Stat3Chance,ClearFlags,SetFlags,UnsetFlags,KingShieldAttackMinusOne,Notes" + Environment.NewLine +
+        "Move,Type,Category,Quality,Power,Accuracy,PP,Priority,HitMin,HitMax,CriticalStage,Flinch,Effect,Param0x0B,Inflict,InflictChance,Heal,Recoil,TurnMin,TurnMax,Targeting,ClearStatEffects,UserStat,UserStatChange,UserStatChance,TargetStat,TargetStatChange,TargetStatChance,Stat1,Stat1Change,Stat1Chance,Stat2,Stat2Change,Stat2Chance,Stat3,Stat3Change,Stat3Chance,ClearFlags,SetFlags,UnsetFlags,KingShieldAttackMinusOne,BattlePatch,Notes,ZEffect" + Environment.NewLine +
         "# Move can be an ID or exact move name. Empty cells keep the current value." + Environment.NewLine +
         "# Type/Category/Targeting/Inflict/Stats accept IDs or names. Flags accept enum names, numeric masks, or tokens separated by ; | ," + Environment.NewLine +
         "15,Grass,Physical,,70,100,15,,,,1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,Cut / Corte" + Environment.NewLine +
@@ -239,6 +255,7 @@ internal static class CustomBalanceTemplates
         "601,,Status,,,,,-1,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,Geomancy / Geocontrol priority -1" + Environment.NewLine +
         "6,,Physical,,25,,40,,,,,40,,,,,,,,,,,,,,,,,,,,,,,,,,,,,Pay Day / Dia de Pago" + Environment.NewLine +
         "594,Water,Special,,30,100,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,Water Shuriken / Shuriken de Agua" + Environment.NewLine +
+        "273,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,Gen7WishPivot,Deseo / Wish: delayed heal + immediate pivot switch" + Environment.NewLine +
         "588,,Status,,,5,,,,,,,,,,,,,,,,true,,,,,,,,,,,,,,,,,,true,King's Shield PP 5 and -1 Attack" + Environment.NewLine;
 
     private static string ExampleEvolutions() =>
@@ -248,6 +265,180 @@ internal static class CustomBalanceTemplates
         "44,182,Friendship,,,,," + Environment.NewLine +
         "356,477,UsedItem,,,,Reaper Cloth,Tela Terrible" + Environment.NewLine;
 
+    private static void EnsureGen7WishPivotTemplateRow(string path)
+    {
+        if (!File.Exists(path))
+            return;
+
+        foreach (string line in File.ReadLines(path))
+        {
+            string trimmed = line.Trim();
+            if (trimmed.Length == 0 || trimmed.StartsWith('#'))
+                continue;
+
+            string[] fields = SplitCsvLine(line);
+            if (fields.Length == 0)
+                continue;
+
+            if (int.TryParse(Get(fields, 0), NumberStyles.Integer, CultureInfo.InvariantCulture, out int move) && move == 273)
+                return;
+        }
+
+        const string row = "273,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,Gen7WishPivot,Deseo / Wish: delayed heal + immediate pivot switch";
+
+        string existing = File.ReadAllText(path);
+        string separator = existing.Length == 0 || existing.EndsWith('\n') ? string.Empty : Environment.NewLine;
+        File.AppendAllText(path, separator + row + Environment.NewLine);
+    }
+
+    private static void EnsureGen7NightmareSleepV76TemplateRow(string path)
+    {
+        if (!File.Exists(path))
+            return;
+
+        const string token = "Gen7NightmareSleepV76";
+        const string finalNote = "Pesadilla / Nightmare: target awake -> stock Sleep only; target already asleep -> vanilla Nightmare.";
+
+        string[] lines = File.ReadAllLines(path);
+        int headerLine = -1;
+        int moveIndex = -1;
+        int battlePatchIndex = -1;
+        int notesIndex = -1;
+        int fieldCount = 0;
+
+        for (int i = 0; i < lines.Length; i++)
+        {
+            string trimmed = lines[i].Trim();
+            if (trimmed.Length == 0 || trimmed.StartsWith('#'))
+                continue;
+
+            string[] fields = SplitCsvLine(lines[i]);
+            if (fields.Length == 0 || NormalizeToken(Get(fields, 0)) != "move")
+                continue;
+
+            headerLine = i;
+            fieldCount = fields.Length;
+
+            for (int j = 0; j < fields.Length; j++)
+            {
+                string name = NormalizeToken(fields[j]);
+
+                if (name == "move")
+                    moveIndex = j;
+                else if (name == "battlepatch")
+                    battlePatchIndex = j;
+                else if (name is "notes" or "note")
+                    notesIndex = j;
+            }
+
+            break;
+        }
+
+        if (headerLine < 0 || moveIndex < 0 || battlePatchIndex < 0 || notesIndex < 0)
+            return;
+
+        for (int i = headerLine + 1; i < lines.Length; i++)
+        {
+            string trimmed = lines[i].Trim();
+            if (trimmed.Length == 0 || trimmed.StartsWith('#'))
+                continue;
+
+            string[] fields = SplitCsvLine(lines[i]);
+
+            if (moveIndex >= fields.Length ||
+                !int.TryParse(
+                    Get(fields, moveIndex),
+                    NumberStyles.Integer,
+                    CultureInfo.InvariantCulture,
+                    out int move) ||
+                move != 171)
+            {
+                continue;
+            }
+
+            int required = Math.Max(
+                fieldCount,
+                Math.Max(battlePatchIndex, notesIndex) + 1);
+
+            if (fields.Length < required)
+                Array.Resize(ref fields, required);
+
+            bool hasToken =
+                Get(fields, battlePatchIndex)
+                    .Split([',', ';', '|'],
+                        StringSplitOptions.RemoveEmptyEntries |
+                        StringSplitOptions.TrimEntries)
+                    .Any(z => NormalizeToken(z) == "gen7nightmaresleepv76");
+
+            bool changed = false;
+
+            if (!hasToken)
+            {
+                fields[battlePatchIndex] =
+                    string.IsNullOrWhiteSpace(fields[battlePatchIndex])
+                        ? token
+                        : fields[battlePatchIndex] + ";" + token;
+
+                changed = true;
+            }
+
+            string note = Get(fields, notesIndex);
+
+            if (string.IsNullOrWhiteSpace(note) ||
+                note.Contains("SPECIAL CHECK", StringComparison.OrdinalIgnoreCase) ||
+                note.Contains("Nightmare", StringComparison.OrdinalIgnoreCase) ||
+                note.Contains("Pesadilla", StringComparison.OrdinalIgnoreCase))
+            {
+                if (note != finalNote)
+                {
+                    fields[notesIndex] = finalNote;
+                    changed = true;
+                }
+            }
+
+            if (changed)
+            {
+                lines[i] = NightmareV76JoinCsvLine(fields);
+                File.WriteAllLines(path, lines);
+            }
+
+            return;
+        }
+
+        int newCount = Math.Max(
+            fieldCount,
+            Math.Max(battlePatchIndex, notesIndex) + 1);
+
+        var newFields = new string[newCount];
+        newFields[moveIndex] = "171";
+        newFields[battlePatchIndex] = token;
+        newFields[notesIndex] = finalNote;
+
+        string existing = File.ReadAllText(path);
+        string separator =
+            existing.Length == 0 || existing.EndsWith('\n')
+                ? string.Empty
+                : Environment.NewLine;
+
+        File.AppendAllText(
+            path,
+            separator +
+            NightmareV76JoinCsvLine(newFields) +
+            Environment.NewLine);
+    }
+
+    private static string NightmareV76JoinCsvLine(IEnumerable<string> fields)
+        => string.Join(",", fields.Select(NightmareV76EscapeCsvField));
+
+    private static string NightmareV76EscapeCsvField(string value)
+    {
+        value ??= string.Empty;
+
+        if (value.IndexOfAny([',', '"', '\r', '\n']) < 0)
+            return value;
+
+        return "\"" + value.Replace("\"", "\"\"") + "\"";
+    }
     private static void WriteIfMissing(string path, string text)
     {
         if (File.Exists(path))
@@ -389,11 +580,53 @@ internal static class CustomBalanceTemplates
     }
 
     private static int ParseInt(string value, int fallback = 0)
-        => int.TryParse(value.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int result) ? result : fallback;
+        => TryParseIntegerToken(value, out int result) ? result : fallback;
 
     private static int? ParseNullableInt(string value)
-        => int.TryParse(value.Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int result) ? result : null;
+        => TryParseIntegerToken(value, out int result) ? result : null;
 
+    private static bool TryParseIntegerToken(string value, out int result)
+    {
+        result = 0;
+
+        value = value?.Trim() ?? string.Empty;
+        if (value.Length == 0)
+            return false;
+
+        int sign = 1;
+        if (value.StartsWith("+", StringComparison.Ordinal))
+        {
+            value = value[1..].TrimStart();
+        }
+        else if (value.StartsWith("-", StringComparison.Ordinal))
+        {
+            sign = -1;
+            value = value[1..].TrimStart();
+        }
+
+        if (value.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!int.TryParse(value[2..], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int hex))
+                return false;
+
+            result = sign * hex;
+            return true;
+        }
+
+        if (value.EndsWith("h", StringComparison.OrdinalIgnoreCase) && value.Length > 1)
+        {
+            if (!int.TryParse(value[..^1], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out int hex))
+                return false;
+
+            result = sign * hex;
+            return true;
+        }
+
+        if (!int.TryParse((sign < 0 ? "-" : string.Empty) + value, NumberStyles.Integer, CultureInfo.InvariantCulture, out result))
+            return false;
+
+        return true;
+    }
     private static bool ParseBool(string value)
     {
         value = value.Trim();

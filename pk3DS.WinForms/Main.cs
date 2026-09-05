@@ -1,4 +1,4 @@
-﻿/*----------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
 /*--  This program is free software: you can redistribute it and/or modify  --*/
 /*--  it under the terms of the GNU General Public License as published by  --*/
 /*--  the Free Software Foundation, either version 3 of the License, or     --*/
@@ -18,6 +18,7 @@ using pk3DS.Core.CTR;
 using pk3DS.Core.Structures.PersonalInfo;
 using System;
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -33,6 +34,7 @@ public sealed partial class Main : Form
         // Initialize the Main Form
         InitializeComponent();
         EnsureCatchZonesButtonVisible();
+        ConfigureModernDashboard();
 
         // Prepare DragDrop Functionality
         AllowDrop = TB_Path.AllowDrop = true;
@@ -73,13 +75,70 @@ public sealed partial class Main : Form
             RandSettings.Load(File.ReadAllLines(randset));
     }
 
+    private void ConfigureModernDashboard()
+    {
+        Text = "pk3DS Progressive Randomizer";
+        MinimumSize = new Size(740, 380);
+        if (Width < 740 || Height < 380)
+            Size = new Size(740, 380);
+
+        L_Game.Text = "No game loaded";
+        L_Game.ForeColor = ModernUI.Danger;
+        TB_Path.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+        TB_Path.Location = new Point(170, 6);
+        TB_Path.Width = Math.Max(260, ClientSize.Width - 190);
+
+        TC_RomFS.SizeMode = TabSizeMode.Normal;
+        TC_RomFS.Appearance = TabAppearance.Normal;
+        TC_RomFS.Location = new Point(12, 48);
+        TC_RomFS.Size = new Size(ClientSize.Width - 24, ClientSize.Height - 86);
+
+        Tab_RomFS.Text = "RomFS";
+        Tab_ExeFS.Text = "ExeFS";
+        Tab_CRO.Text = "CRO/Data";
+        Tab_Output.Text = "Log";
+
+        FormatLauncherButtons(FLP_RomFS);
+        FormatLauncherButtons(FLP_ExeFS);
+        FormatLauncherButtons(FLP_CRO);
+
+        pBar1.Height = 16;
+        pBar1.Location = new Point(12, ClientSize.Height - 28);
+        pBar1.Width = ClientSize.Width - 24;
+
+        Resize += (_, _) =>
+        {
+            TC_RomFS.Size = new Size(ClientSize.Width - 24, ClientSize.Height - 86);
+            pBar1.Location = new Point(12, ClientSize.Height - 28);
+            pBar1.Width = ClientSize.Width - 24;
+            TB_Path.Width = Math.Max(260, ClientSize.Width - 190);
+        };
+    }
+
+    private static void FormatLauncherButtons(FlowLayoutPanel panel)
+    {
+        if (panel == null)
+            return;
+
+        panel.WrapContents = true;
+        panel.AutoScroll = true;
+        panel.Padding = new Padding(14, 12, 14, 12);
+
+        foreach (Button button in panel.Controls.OfType<Button>())
+        {
+            button.Size = new Size(138, 28);
+            button.Margin = new Padding(4, 4, 4, 6);
+            button.TextAlign = ContentAlignment.MiddleCenter;
+        }
+    }
+
     private void EnsureCatchZonesButtonVisible()
     {
         if (FLP_RomFS == null || B_CatchZones == null)
             return;
 
         B_CatchZones.Text = "Enable Catch Zones";
-        B_CatchZones.Size = new System.Drawing.Size(120, 23);
+        B_CatchZones.Size = new System.Drawing.Size(138, 30);
         B_CatchZones.Visible = true;
         B_CatchZones.Enabled = true;
 

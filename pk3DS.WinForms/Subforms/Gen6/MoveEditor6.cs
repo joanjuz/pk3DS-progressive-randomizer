@@ -119,6 +119,7 @@ public partial class MoveEditor6 : Form
         public string SetFlags { get; init; } = string.Empty;
         public string UnsetFlags { get; init; } = string.Empty;
         public bool KingShieldAttackMinusOne { get; init; }
+        public string BattlePatch { get; init; } = string.Empty;
     }
     private void FixMoveEditor6Layout()
     {
@@ -192,11 +193,13 @@ public partial class MoveEditor6 : Form
             SetFlags = z.SetFlags,
             UnsetFlags = z.UnsetFlags,
             KingShieldAttackMinusOne = z.KingShieldAttackMinusOne,
+            BattlePatch = z.BattlePatch,
         }).ToArray();
     }
     private int ApplyBalancedMoves()
     {
         int changed = 0;
+        var battlePatchRequests = new List<CustomBattleEffectPatcher.BattlePatchRequest>();
 
         foreach (var patch in GetBalancedMovePatchesFromTemplate())
         {
@@ -211,13 +214,23 @@ public partial class MoveEditor6 : Form
             ApplyCoreMovePatch(data, patch);
             ApplyStatPatches(data, patch);
             ApplyFlagPatches(data, patch);
+            CustomBattleEffectPatcher.ApplyMoveDataSpecials(6, patch.Move, data, patch.KingShieldAttackMinusOne, patch.BattlePatch);
 
-            if (patch.KingShieldAttackMinusOne)
-                SetKingShieldAttackDrop(data);
+            if (patch.KingShieldAttackMinusOne || !string.IsNullOrWhiteSpace(patch.BattlePatch))
+            {
+                battlePatchRequests.Add(new CustomBattleEffectPatcher.BattlePatchRequest
+                {
+                    Move = patch.Move,
+                    KingShieldAttackMinusOne = patch.KingShieldAttackMinusOne,
+                    BattlePatch = patch.BattlePatch,
+                });
+            }
 
             files[patch.Move] = data;
             changed++;
         }
+
+        CustomBattleEffectPatcher.ApplyExternalPatches(6, battlePatchRequests, (title, message) => WinFormsUtil.Alert(title, message));
 
         return changed;
     }
@@ -283,7 +296,7 @@ public partial class MoveEditor6 : Form
 
     private void ApplyStatPatches(byte[] data, MoveBalancePatch patch)
     {
-        if (patch.ClearStatEffects)
+        if (patch.ClearStatEffects || global::MoveBalanceTemplateSanitizer.ShouldClearStatEffectsBeforeApply(patch))
             ClearMoveStatEffects(data);
 
         if (!string.IsNullOrWhiteSpace(patch.UserStat))

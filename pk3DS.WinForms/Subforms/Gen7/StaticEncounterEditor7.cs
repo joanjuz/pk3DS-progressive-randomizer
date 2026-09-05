@@ -192,17 +192,17 @@ public partial class StaticEncounterEditor7 : Form
     private void AddTradeUtilityButtons()
     {
         const int gap = 6;
-        int left = CB_TRequest.Left;
-        int top = CB_TRequest.Bottom + gap;
-        int width = 230;
-        int height = CB_TRequest.Height;
+        int width = 250;
+        int height = Math.Max(CB_TRequest.Height, 24);
+        int left = Math.Max(CB_TRequest.Left, Tab_Trades.ClientSize.Width - width - 16);
+        int top = Math.Max(CB_TRequest.Bottom + gap, Tab_Trades.ClientSize.Height - (height * 2) - gap - 16);
 
         B_TradeAnyRequest = new Button
         {
             Location = new System.Drawing.Point(left, top),
             Name = "B_TradeAnyRequest",
             Size = new System.Drawing.Size(width, height),
-            Text = "Trades accept any PokÃ©mon",
+            Text = "Trades accept any Pokemon",
             UseVisualStyleBackColor = true,
         };
         B_TradeAnyRequest.Click += B_TradeAnyRequest_Click;
@@ -219,16 +219,33 @@ public partial class StaticEncounterEditor7 : Form
 
         Tab_Trades.Controls.Add(B_TradeAnyRequest);
         Tab_Trades.Controls.Add(B_TradeAcceptAnyRandomOffer);
+        Tab_Trades.Resize += (_, _) => LayoutTradeUtilityButtons();
+        LayoutTradeUtilityButtons();
         B_TradeAnyRequest.BringToFront();
         B_TradeAcceptAnyRandomOffer.BringToFront();
+    }
+
+    private void LayoutTradeUtilityButtons()
+    {
+        if (B_TradeAnyRequest == null || B_TradeAcceptAnyRandomOffer == null)
+            return;
+
+        const int gap = 6;
+        int width = 250;
+        int height = Math.Max(CB_TRequest.Height, 24);
+        int left = Math.Max(CB_TRequest.Left, Tab_Trades.ClientSize.Width - width - 16);
+        int top = Math.Max(CB_TRequest.Bottom + gap, Tab_Trades.ClientSize.Height - (height * 2) - gap - 16);
+
+        B_TradeAnyRequest.SetBounds(left, top, width, height);
+        B_TradeAcceptAnyRandomOffer.SetBounds(left, top + height + gap, width, height);
     }
 
     private void B_TradeAnyRequest_Click(object sender, EventArgs e)
     {
         if (WinFormsUtil.Prompt(
             MessageBoxButtons.YesNo,
-            "Make all in-game trades accept any PokÃ©mon?",
-            "This sets Requested Species to (None) for every in-game trade. The NPC will still give the same PokÃ©mon unless you also randomize the offered PokÃ©mon.") != DialogResult.Yes)
+            "Make all in-game trades accept any Pokemon?",
+            "This sets Requested Species to (None) for every in-game trade. The NPC will still give the same Pokemon unless you also randomize the offered Pokemon.") != DialogResult.Yes)
         {
             return;
         }
@@ -243,7 +260,7 @@ public partial class StaticEncounterEditor7 : Form
             LB_Trade.SelectedIndex = Math.Min(Math.Max(tEntry, 0), LB_Trade.Items.Count - 1);
         GetTrade();
 
-        WinFormsUtil.Alert("Trades updated!", $"{Trades.Length} in-game trades now accept any PokÃ©mon.");
+        WinFormsUtil.Alert("Trades updated!", $"{Trades.Length} in-game trades now accept any Pokemon.");
     }
 
     private void B_TradeAcceptAnyRandomOffer_Click(object sender, EventArgs e)
@@ -251,7 +268,7 @@ public partial class StaticEncounterEditor7 : Form
         if (WinFormsUtil.Prompt(
             MessageBoxButtons.YesNo,
             "Randomize in-game trades?",
-            "This will make every in-game trade accept any PokÃ©mon and randomize the PokÃ©mon the NPC gives you. This does not change the party-only selection UI.") != DialogResult.Yes)
+            "This will make every in-game trade accept any Pokemon and randomize the Pokemon the NPC gives you. This does not change the party-only selection UI.") != DialogResult.Yes)
         {
             return;
         }
@@ -295,7 +312,7 @@ public partial class StaticEncounterEditor7 : Form
             LB_Trade.SelectedIndex = Math.Min(Math.Max(tEntry, 0), LB_Trade.Items.Count - 1);
         GetTrade();
 
-        WinFormsUtil.Alert("Trades randomized!", $"{Trades.Length} in-game trades now accept any PokÃ©mon and give randomized PokÃ©mon.");
+        WinFormsUtil.Alert("Trades randomized!", $"{Trades.Length} in-game trades now accept any Pokemon and give randomized Pokemon.");
     }
 
 

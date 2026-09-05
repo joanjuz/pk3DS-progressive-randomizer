@@ -37,6 +37,8 @@ partial class Patch
         this.label2 = new System.Windows.Forms.Label();
         this.B_CheckAll = new System.Windows.Forms.Button();
         this.B_CheckNone = new System.Windows.Forms.Button();
+        this.B_DumpFieldItems = new System.Windows.Forms.Button();
+        this.B_RandomizeFieldItems = new System.Windows.Forms.Button();
         this.SuspendLayout();
         // 
         // CHKLB_GARCs
@@ -71,7 +73,7 @@ partial class Patch
         // B_PatchCIA
         // 
         this.B_PatchCIA.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-        this.B_PatchCIA.Location = new System.Drawing.Point(168, 278);
+        this.B_PatchCIA.Location = new System.Drawing.Point(288, 278);
         this.B_PatchCIA.Name = "B_PatchCIA";
         this.B_PatchCIA.Size = new System.Drawing.Size(104, 23);
         this.B_PatchCIA.TabIndex = 3;
@@ -131,11 +133,35 @@ partial class Patch
         this.B_CheckNone.UseVisualStyleBackColor = true;
         this.B_CheckNone.Click += new System.EventHandler(this.B_CheckNone_Click);
         // 
+        // B_DumpFieldItems
+        // 
+        this.B_DumpFieldItems.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+        this.B_DumpFieldItems.Location = new System.Drawing.Point(168, 278);
+        this.B_DumpFieldItems.Name = "B_DumpFieldItems";
+        this.B_DumpFieldItems.Size = new System.Drawing.Size(114, 23);
+        this.B_DumpFieldItems.TabIndex = 9;
+        this.B_DumpFieldItems.Text = "Dump Field Items";
+        this.B_DumpFieldItems.UseVisualStyleBackColor = true;
+        this.B_DumpFieldItems.Click += new System.EventHandler(this.B_DumpFieldItems_Click);
+        // 
+        // B_RandomizeFieldItems
+        // 
+        this.B_RandomizeFieldItems.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+        this.B_RandomizeFieldItems.Location = new System.Drawing.Point(284, 278);
+        this.B_RandomizeFieldItems.Name = "B_RandomizeFieldItems";
+        this.B_RandomizeFieldItems.Size = new System.Drawing.Size(120, 23);
+        this.B_RandomizeFieldItems.TabIndex = 10;
+        this.B_RandomizeFieldItems.Text = "Randomize Field Items";
+        this.B_RandomizeFieldItems.UseVisualStyleBackColor = true;
+        this.B_RandomizeFieldItems.Click += new System.EventHandler(this.B_RandomizeFieldItems_Click);
+        // 
         // Patch
         // 
         this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
         this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-        this.ClientSize = new System.Drawing.Size(284, 312);
+        this.ClientSize = new System.Drawing.Size(430, 312);
+        this.Controls.Add(this.B_RandomizeFieldItems);
+        this.Controls.Add(this.B_DumpFieldItems);
         this.Controls.Add(this.B_CheckNone);
         this.Controls.Add(this.B_CheckAll);
         this.Controls.Add(this.label2);
@@ -168,4 +194,6 @@ partial class Patch
     private System.Windows.Forms.Label label2;
     private System.Windows.Forms.Button B_CheckAll;
     private System.Windows.Forms.Button B_CheckNone;
+    private System.Windows.Forms.Button B_DumpFieldItems;
+    private System.Windows.Forms.Button B_RandomizeFieldItems;
 }

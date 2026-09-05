@@ -36,7 +36,7 @@ public partial class MartEditor7 : Form
     private void AddRareCandyButton()
     {
         const int gap = 8;
-        const int buttonWidth = 120;
+        const int buttonWidth = 150;
 
         B_AddRareCandies = new Button
         {
@@ -44,7 +44,7 @@ public partial class MartEditor7 : Form
             Name = "B_AddRareCandies",
             Size = new System.Drawing.Size(buttonWidth, 23),
             TabIndex = 305,
-            Text = "Add rare candies",
+            Text = "Add Rare Candies",
             UseVisualStyleBackColor = true,
         };
 

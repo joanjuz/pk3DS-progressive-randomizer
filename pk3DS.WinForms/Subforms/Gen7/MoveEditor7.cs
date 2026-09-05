@@ -137,6 +137,9 @@ public partial class MoveEditor7 : Form
         public string SetFlags { get; init; } = string.Empty;
         public string UnsetFlags { get; init; } = string.Empty;
         public bool KingShieldAttackMinusOne { get; init; }
+
+        public int? ZEffect { get; init; }
+        public string BattlePatch { get; init; } = string.Empty;
     }
     private MoveBalancePatch[] GetBalancedMovePatchesFromTemplate()
     {
@@ -190,12 +193,15 @@ public partial class MoveEditor7 : Form
             SetFlags = z.SetFlags,
             UnsetFlags = z.UnsetFlags,
             KingShieldAttackMinusOne = z.KingShieldAttackMinusOne,
+            BattlePatch = z.BattlePatch,
+
+            ZEffect = z.ZEffect,
         }).ToArray();
     }
     private int ApplyBalancedMoves()
     {
         int changed = 0;
-        bool patchKingShieldBattleCro = false;
+        var battlePatchRequests = new List<CustomBattleEffectPatcher.BattlePatchRequest>();
 
         foreach (var patch in GetBalancedMovePatchesFromTemplate())
         {
@@ -208,27 +214,30 @@ public partial class MoveEditor7 : Form
                 continue;
 
             ApplyCoreMovePatch(data, patch);
+            ApplyGen7ZMovePatch(data, patch);
             ApplyStatPatches(data, patch);
             ApplyFlagPatches(data, patch);
+            CustomBattleEffectPatcher.ApplyMoveDataSpecials(7, patch.Move, data, patch.KingShieldAttackMinusOne, patch.BattlePatch);
 
-            if (patch.KingShieldAttackMinusOne)
+            bool needsWaterMudSportBattlePatch =
+                patch.Param0x0B.HasValue && patch.Move is 300 or 346;
+
+            if (patch.KingShieldAttackMinusOne || !string.IsNullOrWhiteSpace(patch.BattlePatch) || needsWaterMudSportBattlePatch)
             {
-                // This updates the visible move-data fields, but Gen7 also needs
-                // the Battle.cro effect routine patched below.
-                SetKingShieldAttackDrop(data);
-                patchKingShieldBattleCro = true;
+                battlePatchRequests.Add(new CustomBattleEffectPatcher.BattlePatchRequest
+                {
+                    Move = patch.Move,
+                    KingShieldAttackMinusOne = patch.KingShieldAttackMinusOne,
+                    BattlePatch = patch.BattlePatch,
+                    Param0x0B = patch.Param0x0B,
+                });
             }
 
             files[patch.Move] = data;
             changed++;
         }
 
-        if (patchKingShieldBattleCro)
-        {
-            int croChanged = PatchKingShieldAttackDropInGen7BattleCroCandidate2();
-            if (croChanged < 0)
-                WinFormsUtil.Alert("King's Shield CRO patch skipped", "Could not find the Gen7 King's Shield attack drop pattern in Battle.cro.");
-        }
+        CustomBattleEffectPatcher.ApplyExternalPatches(7, battlePatchRequests, (title, message) => WinFormsUtil.Alert(title, message));
 
         return changed;
     }
@@ -294,7 +303,7 @@ public partial class MoveEditor7 : Form
 
     private void ApplyStatPatches(byte[] data, MoveBalancePatch patch)
     {
-        if (patch.ClearStatEffects)
+        if (patch.ClearStatEffects || global::MoveBalanceTemplateSanitizer.ShouldClearStatEffectsBeforeApply(patch))
             ClearMoveStatEffects(data);
 
         if (!string.IsNullOrWhiteSpace(patch.UserStat))
@@ -573,6 +582,17 @@ public partial class MoveEditor7 : Form
         ["allyfield"] = 12,
         ["campousuario"] = 12,
     };
+
+    private static void ApplyGen7ZMovePatch(byte[] data, MoveBalancePatch patch)
+    {
+        if (!patch.ZEffect.HasValue)
+            return;
+
+        // ZEffect is stored separately from the normal move Effect.
+        // Move7 writes the Gen7 Z-Move metadata into the same backing byte[].
+        Move7 move = new(data);
+        move.ZEffect = patch.ZEffect.Value;
+    }
 
     private static void ClearMoveStatEffects(byte[] data)
     {

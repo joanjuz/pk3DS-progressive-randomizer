@@ -29,6 +29,7 @@ internal static class Program
         // Run the application
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
+        ModernUI.EnableGlobalStyling();
         Application.Run(new Main());
     }
 
