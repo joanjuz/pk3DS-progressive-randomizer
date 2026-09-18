@@ -1,0 +1,30 @@
+# Trainer Better Movesets Template
+# ------------------------------------------------------------
+# This template controls when Better Movesets are applied to trainers.
+#
+# Format:
+# Scope | MinLevel | MaxLevel | Chance | Mode
+#
+# Scope:
+#   Any              = all trainers
+#   Regular          = regular trainers
+#   Important        = important trainers
+#   Boss             = boss-like trainers
+#   Trainer:<id>     = specific trainer ID
+#   Group:<name>     = trainer group when available
+#
+# MinLevel / MaxLevel:
+#   Level range where the rule is active.
+#
+# Chance:
+#   Percentage chance from 0 to 100.
+#
+# Mode:
+#   Better           = apply smart moveset generation
+#   Keep             = keep original moveset
+#
+# Example, commented out:
+# Any | 1 | 100 | 100 | Better
+#
+# Empty template:
+#   With no active rules, this template does not change trainer movesets.

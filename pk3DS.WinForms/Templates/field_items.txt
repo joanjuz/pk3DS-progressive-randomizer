@@ -1,0 +1,47 @@
+# Field Items Template
+# ------------------------------------------------------------
+# This template controls how visible items, hidden items and mega stones
+# are randomized in the field-item randomizer.
+#
+# Main options:
+#   Mode=Shuffle              = shuffle existing field items
+#   Mode=RandomPool           = replace field items using a generated pool
+#
+#   PoolMode=ExcludeListed    = use all valid items except blacklist entries
+#   PoolMode=IncludeOnly      = use only items explicitly listed in Pool.*
+#
+#   IncludeVisible=true       = include visible overworld items
+#   IncludeHidden=true        = include hidden items
+#   IncludeMegaStones=true    = include mega stones in the same pool
+#   ExcludeMachines=true      = exclude TMs/HMs
+#   ExcludeKeyItems=true      = exclude key items
+#   SafeMode=true             = avoid suspicious script regions
+#   KeepCategory=false        = keep or ignore original item category
+#   FallbackToShuffle=true    = shuffle if no valid pool is available
+#
+# Optional blacklist shortcuts:
+#   BanMails=true
+#   BanBadBerries=true
+#   BanFlavorItems=true
+#   BanBattleJunk=true
+#
+# Optional lists:
+#   Blacklist.All=Item Name, Another Item
+#   Blacklist.Berry=Berry Name
+#   Pool.All=Item Name, Another Item
+#   Pool.Medicine=Potion, Super Potion
+#
+# Example, commented out:
+# Mode=RandomPool
+# PoolMode=ExcludeListed
+# IncludeVisible=true
+# IncludeHidden=true
+# IncludeMegaStones=true
+# ExcludeMachines=true
+# ExcludeKeyItems=true
+# SafeMode=true
+# KeepCategory=false
+# FallbackToShuffle=true
+#
+# Empty template:
+#   With no active options, the randomizer should use its internal defaults.

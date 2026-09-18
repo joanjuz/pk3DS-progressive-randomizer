@@ -1,0 +1,36 @@
+# Trainer Held Items Template
+# ------------------------------------------------------------
+# This template controls how held items are assigned to trainers.
+#
+# Format:
+# Scope | MinLevel | MaxLevel | Chance | Mode | Items
+#
+# Scope:
+#   Any              = all trainers
+#   Regular          = regular trainers
+#   Important        = important trainers
+#   Boss             = boss-like trainers
+#   Trainer:<id>     = specific trainer ID
+#   Group:<name>     = trainer group when available
+#
+# MinLevel / MaxLevel:
+#   Level range where the rule is active.
+#
+# Chance:
+#   Percentage chance from 0 to 100.
+#
+# Mode:
+#   Random           = choose a random legal item from the pool
+#   Smart            = choose a smart item based on PokÃ©mon, moves, ability and role
+#   Clear            = remove held item
+#   Keep             = keep original item
+#
+# Items:
+#   POOL             = use the runtime legal held-item pool
+#   Or write item names / IDs separated by commas.
+#
+# Example, commented out:
+# Any | 1 | 100 | 100 | Smart | POOL
+#
+# Empty template:
+#   With no active rules, this template does not change trainer held items.
